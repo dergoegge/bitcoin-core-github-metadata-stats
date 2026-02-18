@@ -171,6 +171,8 @@
     let DATA = null;
     let activeTF = 'year';
     let charts = {};
+    let chartPercentMode = {};  // canvasId -> bool
+    let chartRenderParams = {}; // canvasId -> params (for re-render on toggle)
 
     fetch('data.json')
       .then(r => r.json())
@@ -884,10 +886,71 @@
         delete charts[canvasId];
       }
 
+      // Store params for re-render on percent toggle
+      chartRenderParams[canvasId] = { labels, datasets, stacked, minBarWidth, type, yTitle, secondaryY, wrapperId };
+
       // Set wrapper width for scrollable charts
       const wrapper = document.getElementById(wrapperId);
       const neededWidth = labels.length * (minBarWidth + 4);
       wrapper.style.minWidth = neededWidth > 600 ? neededWidth + 'px' : '';
+
+      const chartType = type || 'bar';
+      // Eligible for % toggle: pure bar chart with multiple datasets
+      const isMultiBar = chartType === 'bar' && !secondaryY
+        && !datasets.some(d => d.type && d.type !== 'bar')
+        && datasets.length > 1;
+
+      // Manage per-chart % toggle button, placed inline with the card's h2 title
+      const btnId = canvasId + '_pctBtn';
+      const card = wrapper.closest('.bg-gray-900');
+      const heading = card ? card.querySelector('h2') : null;
+      let btn = document.getElementById(btnId);
+      if (isMultiBar && heading) {
+        // Ensure the heading is in a flex row so the button sits on the right
+        if (!heading.parentElement.classList.contains('chart-heading-row')) {
+          const row = document.createElement('div');
+          row.className = 'chart-heading-row flex items-center justify-between';
+          heading.parentNode.insertBefore(row, heading);
+          row.appendChild(heading);
+        }
+        const row = heading.parentElement;
+        if (!btn) {
+          btn = document.createElement('button');
+          btn.id = btnId;
+          btn.textContent = '%';
+          btn.onclick = () => {
+            chartPercentMode[canvasId] = !chartPercentMode[canvasId];
+            const p = chartRenderParams[canvasId];
+            renderChart(canvasId, p.wrapperId, p);
+          };
+          row.appendChild(btn);
+        }
+        const active = !!chartPercentMode[canvasId];
+        btn.className = `px-2 py-0.5 rounded text-xs font-bold border transition cursor-pointer ${
+          active ? 'bg-blue-600 border-blue-600 text-white' : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+        }`;
+      } else if (btn) {
+        btn.remove();
+      }
+
+      // Apply percentage transform if active for this chart
+      const pctActive = isMultiBar && !!chartPercentMode[canvasId];
+      let finalDatasets = datasets;
+      let finalYTitle = yTitle || 'Count';
+      if (pctActive) {
+        const len = labels.length;
+        const totals = new Array(len).fill(0);
+        for (const ds of datasets) {
+          for (let i = 0; i < len; i++) {
+            totals[i] += (ds.data[i] || 0);
+          }
+        }
+        finalDatasets = datasets.map(ds => ({
+          ...ds,
+          data: ds.data.map((v, i) => totals[i] > 0 ? Math.round((v || 0) / totals[i] * 1000) / 10 : 0),
+        }));
+        finalYTitle = '%';
+      }
 
       const ctx = document.getElementById(canvasId);
       const scales = {
@@ -901,9 +964,10 @@
           },
         },
         y: {
-          title: { display: true, text: yTitle || 'Count' },
+          title: { display: true, text: finalYTitle },
           beginAtZero: true,
           stacked: !!stacked,
+          max: (pctActive && stacked) ? 100 : undefined,
         },
       };
       if (secondaryY) {
@@ -920,13 +984,18 @@
         maintainAspectRatio: true,
         plugins: {
           legend: { display: true, position: 'top', labels: { boxWidth: 12, padding: 16 } },
+          tooltip: pctActive ? {
+            callbacks: {
+              label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}%`,
+            },
+          } : {},
         },
         scales,
       };
 
       charts[canvasId] = new Chart(ctx, {
-        type: type || 'bar',
-        data: { labels, datasets },
+        type: chartType,
+        data: { labels, datasets: finalDatasets },
         options: opts,
       });
     }
