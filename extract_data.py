@@ -187,6 +187,19 @@ def main():
     # Per-PR activity data for heatmaps
     pr_activity = {}
 
+    # Label counts: label_counts_pr[timeframe][period][label] = count
+    label_counts_pr = {
+        "year": defaultdict(lambda: defaultdict(int)),
+        "quarter": defaultdict(lambda: defaultdict(int)),
+        "month": defaultdict(lambda: defaultdict(int)),
+    }
+    # Label counts for issues: label_counts_issue[timeframe][period][label] = count
+    label_counts_issue = {
+        "year": defaultdict(lambda: defaultdict(int)),
+        "quarter": defaultdict(lambda: defaultdict(int)),
+        "month": defaultdict(lambda: defaultdict(int)),
+    }
+
     # Review clustering: (review_iso_date, pr_age_days) for each review/comment event on a PR
     review_age_events = []
 
@@ -218,6 +231,13 @@ def main():
         created_date = pull["created_at"]
         created_keys = period_keys(created_date)
         all_prs.append((created_date, author, created_keys))
+
+        # Collect labels on this PR, bucketed by creation date
+        for lbl in pull.get("labels", []):
+            label_name = lbl.get("name", "")
+            if label_name:
+                for tf_key, period in created_keys.items():
+                    label_counts_pr[tf_key][period][label_name] += 1
 
         additions = pull.get("additions", 0) or 0
         deletions = pull.get("deletions", 0) or 0
@@ -395,6 +415,17 @@ def main():
 
         with open(os.path.join(issues_dir, fname)) as f:
             data = json.load(f)
+
+        issue = data.get("issue", data)
+        # Collect labels on this issue, bucketed by creation date
+        issue_created = issue.get("created_at", "")
+        if issue_created and len(issue_created) >= 10:
+            issue_keys = period_keys(issue_created)
+            for lbl in issue.get("labels", []):
+                label_name = lbl.get("name", "")
+                if label_name:
+                    for tf_key, period in issue_keys.items():
+                        label_counts_issue[tf_key][period][label_name] += 1
 
         events = data.get("events", [])
         collect_comments(events, [], comment_counts)
@@ -580,6 +611,14 @@ def main():
             "review_by_pr_age_buckets": _AGE_BUCKET_LABELS,
             "review_by_pr_age": {
                 p: {label: review_by_pr_age.get(p, {}).get(label, 0) for label in _AGE_BUCKET_LABELS}
+                for p in all_periods
+            },
+            "label_counts_pr": {
+                p: dict(sorted(label_counts_pr[tf].get(p, {}).items(), key=lambda x: -x[1]))
+                for p in all_periods
+            },
+            "label_counts_issue": {
+                p: dict(sorted(label_counts_issue[tf].get(p, {}).items(), key=lambda x: -x[1]))
                 for p in all_periods
             },
         }

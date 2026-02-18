@@ -76,6 +76,16 @@
         <p class="text-gray-500 text-sm mb-4">Review comments received on PRs, broken down by PR author (top 15 + others, excludes author's own comments)</p>
         <div class="relative overflow-x-auto"><div id="wrapReviewsRecvByAuthor"><canvas id="chartReviewsRecvByAuthor"></canvas></div></div>
       </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-1">PR Labels</h2>
+        <p class="text-gray-500 text-sm mb-4">Label usage on pull requests over time (by PR creation date, top 15 + others)</p>
+        <div class="relative overflow-x-auto"><div id="wrapLabelsPR"><canvas id="chartLabelsPR"></canvas></div></div>
+      </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-1">Issue Labels</h2>
+        <p class="text-gray-500 text-sm mb-4">Label usage on issues over time (by issue creation date, top 15 + others)</p>
+        <div class="relative overflow-x-auto"><div id="wrapLabelsIssue"><canvas id="chartLabelsIssue"></canvas></div></div>
+      </div>
     </div>
 
     <!-- Data table -->
@@ -476,6 +486,84 @@
         });
         renderChart('chartReviewsRecvByAuthor', 'wrapReviewsRecvByAuthor', {
           labels, minBarWidth, stacked: true, datasets: rrDatasets,
+        });
+      }
+
+      // PR Labels — stacked bar, top 15 + Others
+      {
+        const allLabels = new Map();
+        for (const p of periods) {
+          const lc = tf.label_counts_pr[p] || {};
+          for (const [l, c] of Object.entries(lc)) {
+            allLabels.set(l, (allLabels.get(l) || 0) + c);
+          }
+        }
+        const sorted = [...allLabels.entries()].sort((a, b) => b[1] - a[1]);
+        const topN = 15;
+        const topLabels = sorted.slice(0, topN).map(([l]) => l);
+        const topSet = new Set(topLabels);
+        const palette = [
+          'rgb(59, 130, 246)', 'rgb(249, 115, 22)', 'rgb(34, 197, 94)', 'rgb(168, 85, 247)',
+          'rgb(236, 72, 153)', 'rgb(234, 179, 8)', 'rgb(20, 184, 166)', 'rgb(239, 68, 68)',
+          'rgb(99, 102, 241)', 'rgb(244, 114, 182)', 'rgb(45, 212, 191)', 'rgb(251, 146, 60)',
+          'rgb(129, 140, 248)', 'rgb(74, 222, 128)', 'rgb(232, 121, 249)',
+        ];
+        const datasets = topLabels.map((label, idx) => ({
+          label,
+          data: periods.map(p => (tf.label_counts_pr[p] || {})[label] || 0),
+          backgroundColor: palette[idx % palette.length],
+          borderRadius: 4,
+        }));
+        datasets.push({
+          label: 'Others',
+          data: periods.map(p => {
+            const all = tf.label_counts_pr[p] || {};
+            return Object.entries(all).reduce((sum, [l, c]) => sum + (topSet.has(l) ? 0 : c), 0);
+          }),
+          backgroundColor: 'rgb(107, 114, 128)',
+          borderRadius: 4,
+        });
+        renderChart('chartLabelsPR', 'wrapLabelsPR', {
+          labels, minBarWidth, stacked: true, datasets,
+        });
+      }
+
+      // Issue Labels — stacked bar, top 15 + Others
+      {
+        const allLabels = new Map();
+        for (const p of periods) {
+          const lc = tf.label_counts_issue[p] || {};
+          for (const [l, c] of Object.entries(lc)) {
+            allLabels.set(l, (allLabels.get(l) || 0) + c);
+          }
+        }
+        const sorted = [...allLabels.entries()].sort((a, b) => b[1] - a[1]);
+        const topN = 15;
+        const topLabels = sorted.slice(0, topN).map(([l]) => l);
+        const topSet = new Set(topLabels);
+        const palette = [
+          'rgb(59, 130, 246)', 'rgb(249, 115, 22)', 'rgb(34, 197, 94)', 'rgb(168, 85, 247)',
+          'rgb(236, 72, 153)', 'rgb(234, 179, 8)', 'rgb(20, 184, 166)', 'rgb(239, 68, 68)',
+          'rgb(99, 102, 241)', 'rgb(244, 114, 182)', 'rgb(45, 212, 191)', 'rgb(251, 146, 60)',
+          'rgb(129, 140, 248)', 'rgb(74, 222, 128)', 'rgb(232, 121, 249)',
+        ];
+        const datasets = topLabels.map((label, idx) => ({
+          label,
+          data: periods.map(p => (tf.label_counts_issue[p] || {})[label] || 0),
+          backgroundColor: palette[idx % palette.length],
+          borderRadius: 4,
+        }));
+        datasets.push({
+          label: 'Others',
+          data: periods.map(p => {
+            const all = tf.label_counts_issue[p] || {};
+            return Object.entries(all).reduce((sum, [l, c]) => sum + (topSet.has(l) ? 0 : c), 0);
+          }),
+          backgroundColor: 'rgb(107, 114, 128)',
+          borderRadius: 4,
+        });
+        renderChart('chartLabelsIssue', 'wrapLabelsIssue', {
+          labels, minBarWidth, stacked: true, datasets,
         });
       }
 
