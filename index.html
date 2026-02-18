@@ -67,6 +67,11 @@
         <p class="text-gray-500 text-sm mb-4">Where does review effort go? Reviews and comments bucketed by PR age at time of review (excludes PR author's own activity)</p>
         <div class="relative overflow-x-auto"><div id="wrapReviewAge"><canvas id="chartReviewAge"></canvas></div></div>
       </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-1">Reviews Received by Author</h2>
+        <p class="text-gray-500 text-sm mb-4">Review comments received on PRs, broken down by PR author (top 15 + others, excludes author's own comments)</p>
+        <div class="relative overflow-x-auto"><div id="wrapReviewsRecvByAuthor"><canvas id="chartReviewsRecvByAuthor"></canvas></div></div>
+      </div>
     </div>
 
     <!-- Data table -->
@@ -379,6 +384,50 @@
         }));
         renderChart('chartReviewAge', 'wrapReviewAge', {
           labels, minBarWidth, stacked: true, datasets,
+        });
+      }
+
+      // Reviews received by author — stacked bar, top 15 + Others
+      {
+        const cstats = tf.contributor_stats || {};
+        const allAuthors = new Map();
+        for (const [author, pd] of Object.entries(cstats)) {
+          let total = 0;
+          for (const p of periods) {
+            total += pd[p] ? (pd[p].reviews_received || 0) : 0;
+          }
+          if (total > 0) allAuthors.set(author, total);
+        }
+        const sorted = [...allAuthors.entries()].sort((a, b) => b[1] - a[1]);
+        const topN = 15;
+        const topAuthors = sorted.slice(0, topN).map(([u]) => u);
+        const topSet = new Set(topAuthors);
+        const palette = [
+          'rgb(59, 130, 246)', 'rgb(249, 115, 22)', 'rgb(34, 197, 94)', 'rgb(168, 85, 247)',
+          'rgb(236, 72, 153)', 'rgb(234, 179, 8)', 'rgb(20, 184, 166)', 'rgb(239, 68, 68)',
+          'rgb(99, 102, 241)', 'rgb(244, 114, 182)', 'rgb(45, 212, 191)', 'rgb(251, 146, 60)',
+          'rgb(129, 140, 248)', 'rgb(74, 222, 128)', 'rgb(232, 121, 249)',
+        ];
+        const rrDatasets = topAuthors.map((author, idx) => ({
+          label: author,
+          data: periods.map(p => (cstats[author] || {})[p] ? (cstats[author][p].reviews_received || 0) : 0),
+          backgroundColor: palette[idx % palette.length],
+          borderRadius: 4,
+        }));
+        rrDatasets.push({
+          label: 'Others',
+          data: periods.map(p => {
+            let sum = 0;
+            for (const [author, pd] of Object.entries(cstats)) {
+              if (!topSet.has(author) && pd[p]) sum += pd[p].reviews_received || 0;
+            }
+            return sum;
+          }),
+          backgroundColor: 'rgb(107, 114, 128)',
+          borderRadius: 4,
+        });
+        renderChart('chartReviewsRecvByAuthor', 'wrapReviewsRecvByAuthor', {
+          labels, minBarWidth, stacked: true, datasets: rrDatasets,
         });
       }
 
