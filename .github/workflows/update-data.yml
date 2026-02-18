@@ -1,4 +1,4 @@
-name: Update data.json
+name: Update data
 
 on:
   push:
@@ -16,21 +16,29 @@ jobs:
       - name: Checkout master
         uses: actions/checkout@v4
 
-      - name: Clone metadata backup repo
-        run: git clone --depth 1 https://github.com/bitcoin-data/github-metadata-backup-bitcoin-bitcoin.git metadata-repo
+      - name: Clone metadata backup repos
+        run: |
+          git clone --depth 1 https://github.com/bitcoin-data/github-metadata-backup-bitcoin-bitcoin.git backup-bitcoin-bitcoin
+          git clone --depth 1 https://github.com/bitcoin-data/github-metadata-backup-bitcoin-core-gui.git backup-bitcoin-core-gui
+          git clone --depth 1 https://github.com/bitcoin-data/github-metadata-backup-bitcoin-core-secp256k1.git backup-bitcoin-core-secp256k1
+          git clone --depth 1 https://github.com/bitcoin-data/github-metadata-backup-bitcoin-bips.git backup-bitcoin-bips
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Run extractor
-        run: python extract_data.py metadata-repo --username-map username_map.json
+      - name: Run extractor for all repos
+        run: |
+          python extract_data.py backup-bitcoin-bitcoin --username-map username_map.json -o data-bitcoin-bitcoin.json
+          python extract_data.py backup-bitcoin-core-gui --username-map username_map.json -o data-bitcoin-core-gui.json
+          python extract_data.py backup-bitcoin-core-secp256k1 --username-map username_map.json -o data-bitcoin-core-secp256k1.json
+          python extract_data.py backup-bitcoin-bips --username-map username_map.json -o data-bitcoin-bips.json
 
       - name: Prepare publish directory
         run: |
           mkdir -p publish
-          cp data.json index.html username_map.json publish/
+          cp data-*.json index.html username_map.json publish/
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4

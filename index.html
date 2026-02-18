@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bitcoin Core GitHub Stats</title>
+  <title>GitHub Stats</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
@@ -11,11 +11,15 @@
   <div class="max-w-6xl mx-auto px-6 py-10">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
       <div>
-        <h1 class="text-3xl font-bold text-white mb-1">Bitcoin Core GitHub Stats</h1>
-        <p class="text-gray-400">PR authors and comment activity per period (bitcoin/bitcoin)</p>
+        <h1 class="text-3xl font-bold text-white mb-1" id="pageTitle">GitHub Stats</h1>
+        <p class="text-gray-400" id="pageSubtitle">PR authors and comment activity per period</p>
       </div>
-      <!-- Timeframe selector -->
-      <div id="timeframePicker" class="flex bg-gray-900 rounded-lg border border-gray-800 p-1 gap-1 self-start"></div>
+      <div class="flex flex-col sm:flex-row gap-2 self-start">
+        <!-- Repo selector -->
+        <select id="repoPicker" class="bg-gray-900 border border-gray-800 text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-blue-500"></select>
+        <!-- Timeframe selector -->
+        <div id="timeframePicker" class="flex bg-gray-900 rounded-lg border border-gray-800 p-1 gap-1"></div>
+      </div>
     </div>
 
     <!-- Summary cards -->
@@ -174,26 +178,55 @@
     Chart.defaults.color = 'rgb(156, 163, 175)';
     Chart.defaults.borderColor = 'rgb(55, 65, 81)';
 
+    const REPOS = [
+      { key: 'bitcoin-bitcoin',         label: 'bitcoin/bitcoin',         file: 'data-bitcoin-bitcoin.json' },
+      { key: 'bitcoin-core-gui',        label: 'bitcoin-core/gui',        file: 'data-bitcoin-core-gui.json' },
+      { key: 'bitcoin-core-secp256k1',  label: 'bitcoin-core/secp256k1',  file: 'data-bitcoin-core-secp256k1.json' },
+      { key: 'bitcoin-bips',            label: 'bitcoin/bips',            file: 'data-bitcoin-bips.json' },
+    ];
+
     let DATA = null;
     let activeTF = 'year';
+    let activeRepo = REPOS[0].key;
     let charts = {};
     let chartPercentMode = {};  // canvasId -> bool
     let chartRenderParams = {}; // canvasId -> params (for re-render on toggle)
 
-    fetch('data.json')
-      .then(r => {
-        const lastMod = r.headers.get('Last-Modified');
-        return r.json().then(data => ({ data, lastMod }));
-      })
-      .then(({ data, lastMod }) => {
-        DATA = data;
-        if (lastMod) {
-          const d = new Date(lastMod);
-          document.getElementById('dataTimestamp').textContent = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-        }
-        buildTimeframePicker();
-        renderAll();
-      });
+    function buildRepoPicker() {
+      const el = document.getElementById('repoPicker');
+      el.innerHTML = REPOS.map(r =>
+        `<option value="${r.key}" ${r.key === activeRepo ? 'selected' : ''}>${r.label}</option>`
+      ).join('');
+      el.onchange = () => {
+        activeRepo = el.value;
+        loadRepo(activeRepo);
+      };
+    }
+
+    function loadRepo(repoKey) {
+      const repo = REPOS.find(r => r.key === repoKey);
+      if (!repo) return;
+      document.getElementById('pageTitle').textContent = `${repo.label} GitHub Stats`;
+      document.getElementById('pageSubtitle').textContent = `PR authors and comment activity per period (${repo.label})`;
+      document.title = `${repo.label} GitHub Stats`;
+      fetch(repo.file)
+        .then(r => {
+          const lastMod = r.headers.get('Last-Modified');
+          return r.json().then(data => ({ data, lastMod }));
+        })
+        .then(({ data, lastMod }) => {
+          DATA = data;
+          if (lastMod) {
+            const d = new Date(lastMod);
+            document.getElementById('dataTimestamp').textContent = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          }
+          renderAll();
+        });
+    }
+
+    buildRepoPicker();
+    buildTimeframePicker();
+    loadRepo(activeRepo);
 
     function buildTimeframePicker() {
       const el = document.getElementById('timeframePicker');

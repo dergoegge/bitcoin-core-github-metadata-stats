@@ -153,6 +153,10 @@ def main():
         "--username-map",
         help="Path to JSON file mapping old usernames to new ones: {\"old\": \"new\", ...}",
     )
+    parser.add_argument(
+        "-o", "--output",
+        help="Output JSON file path (default: data.json next to this script)",
+    )
     args = parser.parse_args()
 
     backup_dir = args.metadata_repo
@@ -379,7 +383,11 @@ def main():
         }
 
     # --- Read issues ---
-    issue_files = [f for f in os.listdir(issues_dir) if f.endswith(".json")]
+    if not os.path.isdir(issues_dir):
+        issue_files = []
+        print(f"  No issues directory found, skipping issues.", file=sys.stderr)
+    else:
+        issue_files = [f for f in os.listdir(issues_dir) if f.endswith(".json")]
     total_issues = len(issue_files)
     for i, fname in enumerate(issue_files):
         if (i + 1) % 1000 == 0:
@@ -582,7 +590,10 @@ def main():
         "pr_activity": pr_activity,
     }
 
-    out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
+    if args.output:
+        out_path = args.output
+    else:
+        out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
     with open(out_path, "w") as f:
         json.dump(output, f)
 
