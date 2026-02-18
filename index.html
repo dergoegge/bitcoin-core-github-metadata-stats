@@ -94,9 +94,13 @@
       <p class="text-gray-500 text-sm mb-4">Per-contributor averages per period across merged PRs</p>
       <select id="selectContributor" class="mb-4 w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"></select>
       <div id="contributorSummary" class="text-sm text-gray-300 mb-6"></div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="relative overflow-x-auto"><div id="wrapContribPRs"><canvas id="chartContribPRs"></canvas></div></div>
         <div class="relative overflow-x-auto"><div id="wrapContribTTM"><canvas id="chartContribTTM"></canvas></div></div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="relative overflow-x-auto"><div id="wrapContribSize"><canvas id="chartContribSize"></canvas></div></div>
+        <div class="relative overflow-x-auto"><div id="wrapContribComments"><canvas id="chartContribComments"></canvas></div></div>
       </div>
     </div>
 
@@ -460,6 +464,17 @@
               </div>
             </div>`;
 
+          // Merged vs Closed PRs chart
+          const mergedData = periods.map(p => pd[p] ? pd[p].count : 0);
+          const closedData = periods.map(p => pd[p] ? (pd[p].closed_count || 0) : 0);
+          renderChart('chartContribPRs', 'wrapContribPRs', {
+            labels, minBarWidth, stacked: true,
+            datasets: [
+              { label: 'Merged', data: mergedData, backgroundColor: COLORS.green, borderRadius: 4 },
+              { label: 'Closed', data: closedData, backgroundColor: COLORS.red, borderRadius: 4 },
+            ],
+          });
+
           // TTM + PR count chart
           const ttmData = periods.map(p => pd[p] ? pd[p].avg_ttm : null);
           const countData = periods.map(p => pd[p] ? pd[p].count : 0);
@@ -486,6 +501,15 @@
             ],
             yTitle: 'Lines',
             secondaryY: { title: 'Commits', position: 'right' },
+          });
+
+          // Comments per period chart
+          const commentData = periods.map(p => pd[p] ? (pd[p].comments || 0) : 0);
+          renderChart('chartContribComments', 'wrapContribComments', {
+            labels, minBarWidth,
+            datasets: [
+              { label: 'Comments', data: commentData, backgroundColor: COLORS.purple, borderRadius: 4 },
+            ],
           });
         }
         renderContributor(defaultAuthor);
