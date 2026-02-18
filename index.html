@@ -108,7 +108,7 @@
         <div id="authorList" class="text-sm text-gray-300"></div>
       </div>
       <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-4">Merge Access (30d)</h2>
+        <h2 class="text-lg font-semibold mb-4">Merge Access</h2>
         <select id="selectMergeAccess" class="mb-4 w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"></select>
         <div id="mergeAccessList" class="text-sm text-gray-300"></div>
       </div>
@@ -219,7 +219,7 @@
 
       renderChart('chartMergeAccess', 'wrapMergeAccess', {
         labels, minBarWidth,
-        datasets: [{ label: 'Merge Access (30d)', data: mergeAccess, backgroundColor: COLORS.green, borderRadius: 4 }],
+        datasets: [{ label: 'Merge Access', data: mergeAccess, backgroundColor: COLORS.green, borderRadius: 4 }],
       });
 
       // Merged PRs by merger — stacked bar, one dataset per person
