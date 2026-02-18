@@ -62,6 +62,11 @@
         <p class="text-gray-500 text-sm mb-4">Counts comments on both PRs and issues (issue comments, review comments, and code reviews)</p>
         <div class="relative overflow-x-auto"><div id="wrapCommenters"><canvas id="chartCommenters"></canvas></div></div>
       </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-1">Review Activity by PR Age</h2>
+        <p class="text-gray-500 text-sm mb-4">Where does review effort go? Reviews and comments bucketed by PR age at time of review (excludes PR author's own activity)</p>
+        <div class="relative overflow-x-auto"><div id="wrapReviewAge"><canvas id="chartReviewAge"></canvas></div></div>
+      </div>
     </div>
 
     <!-- Data table -->
@@ -98,9 +103,12 @@
         <div class="relative overflow-x-auto"><div id="wrapContribPRs"><canvas id="chartContribPRs"></canvas></div></div>
         <div class="relative overflow-x-auto"><div id="wrapContribTTM"><canvas id="chartContribTTM"></canvas></div></div>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div class="relative overflow-x-auto"><div id="wrapContribSize"><canvas id="chartContribSize"></canvas></div></div>
         <div class="relative overflow-x-auto"><div id="wrapContribComments"><canvas id="chartContribComments"></canvas></div></div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="relative overflow-x-auto"><div id="wrapContribReviewsRecv"><canvas id="chartContribReviewsRecv"></canvas></div></div>
       </div>
     </div>
 
@@ -347,6 +355,33 @@
         datasets: [{ label: `Commenters >${threshold}`, data: prolific, backgroundColor: COLORS.purple, borderRadius: 4 }],
       });
 
+      // Review activity by PR age — stacked bar
+      {
+        const buckets = tf.review_by_pr_age_buckets || [];
+        const agePalette = [
+          'rgb(34, 197, 94)',    // <1w  — green (fresh)
+          'rgb(74, 222, 128)',   // 1-4w — light green
+          'rgb(234, 179, 8)',    // 1-3m — yellow
+          'rgb(249, 115, 22)',   // 3-6m — orange
+          'rgb(239, 68, 68)',    // 6-12m — red
+          'rgb(168, 85, 247)',   // 1-2y — purple
+          'rgb(107, 114, 128)',  // 2y+  — gray
+        ];
+        const bucketLabels = {
+          '<1w': '< 1 week', '1-4w': '1\u20134 weeks', '1-3m': '1\u20133 months',
+          '3-6m': '3\u20136 months', '6-12m': '6\u201312 months', '1-2y': '1\u20132 years', '2y+': '2+ years',
+        };
+        const datasets = buckets.map((bucket, idx) => ({
+          label: bucketLabels[bucket] || bucket,
+          data: periods.map(p => (tf.review_by_pr_age[p] || {})[bucket] || 0),
+          backgroundColor: agePalette[idx % agePalette.length],
+          borderRadius: 4,
+        }));
+        renderChart('chartReviewAge', 'wrapReviewAge', {
+          labels, minBarWidth, stacked: true, datasets,
+        });
+      }
+
       // Table
       const avgTTMAll = periods.map(p => tf.avg_time_to_merge[p] || 0);
       const medTTMAll = periods.map(p => tf.median_time_to_merge[p] || 0);
@@ -522,6 +557,15 @@
             labels, minBarWidth,
             datasets: [
               { label: 'Comments', data: commentData, backgroundColor: COLORS.purple, borderRadius: 4 },
+            ],
+          });
+
+          // Reviews received per period chart
+          const reviewsRecvData = periods.map(p => pd[p] ? (pd[p].reviews_received || 0) : 0);
+          renderChart('chartContribReviewsRecv', 'wrapContribReviewsRecv', {
+            labels, minBarWidth,
+            datasets: [
+              { label: 'Reviews Received', data: reviewsRecvData, backgroundColor: COLORS.blue, borderRadius: 4 },
             ],
           });
         }

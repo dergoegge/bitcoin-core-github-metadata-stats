@@ -19,7 +19,7 @@ _SKIP_ACTIVITY_EVENTS = frozenset({
     "locked", "unlocked",
 })
 
-# Bots to ignore for PR engagement metrics and activity heatmap
+# Bots to exclude from all extracted data
 _IGNORE_USERS = frozenset({"DrahtBot"})
 
 # Global username mapping (old_name -> new_name), loaded from CLI arg
@@ -58,6 +58,8 @@ def collect_comments(events, comments_array, out):
         if user is None:
             continue
         login = map_username(user["login"])
+        if login in _IGNORE_USERS:
+            continue
         date = ev.get("created_at") or ev.get("submitted_at", "")
         if len(date) < 10:
             continue
@@ -70,6 +72,8 @@ def collect_comments(events, comments_array, out):
         if user is None:
             continue
         login = map_username(user["login"])
+        if login in _IGNORE_USERS:
+            continue
         date = c.get("created_at", "")
         if len(date) < 10:
             continue
@@ -78,7 +82,7 @@ def collect_comments(events, comments_array, out):
             out[tf][period][login] += 1
 
 
-def _build_contributor_stats(author_period_stats, closed_by_author_period, comment_counts_tf):
+def _build_contributor_stats(author_period_stats, closed_by_author_period, comment_counts_tf, reviews_received_tf):
     """Build contributor_stats dict including merged/closed PR counts and comment counts."""
     # Collect authors that have at least one merged or closed PR
     all_authors = set(author_period_stats.keys())
@@ -100,17 +104,23 @@ def _build_contributor_stats(author_period_stats, closed_by_author_period, comme
         for period, users in comment_counts_tf.items():
             if author in users:
                 author_periods.add(period)
+        # Also include periods where this author received reviews
+        for period, users in reviews_received_tf.items():
+            if author in users:
+                author_periods.add(period)
 
         author_result = {}
         for p in author_periods:
             pstats = merged_data.get(p)
             closed = closed_by_author_period.get(p, {}).get(author, 0)
             comments = comment_counts_tf.get(p, {}).get(author, 0)
+            received = reviews_received_tf.get(p, {}).get(author, 0)
             if pstats:
                 author_result[p] = {
                     "count": len(pstats["ttm"]),
                     "closed_count": closed,
                     "comments": comments,
+                    "reviews_received": received,
                     "avg_ttm": round(sum(pstats["ttm"]) / len(pstats["ttm"]), 1),
                     "avg_additions": round(sum(pstats["additions"]) / len(pstats["additions"]), 1),
                     "avg_deletions": round(sum(pstats["deletions"]) / len(pstats["deletions"]), 1),
@@ -121,6 +131,7 @@ def _build_contributor_stats(author_period_stats, closed_by_author_period, comme
                     "count": 0,
                     "closed_count": closed,
                     "comments": comments,
+                    "reviews_received": received,
                     "avg_ttm": 0,
                     "avg_additions": 0,
                     "avg_deletions": 0,
@@ -171,6 +182,16 @@ def main():
 
     # Per-PR activity data for heatmaps
     pr_activity = {}
+
+    # Review clustering: (review_iso_date, pr_age_days) for each review/comment event on a PR
+    review_age_events = []
+
+    # Reviews received per PR author: reviews_received[timeframe][period][pr_author] += 1
+    reviews_received = {
+        "year": defaultdict(lambda: defaultdict(int)),
+        "quarter": defaultdict(lambda: defaultdict(int)),
+        "month": defaultdict(lambda: defaultdict(int)),
+    }
 
     # --- Read PRs ---
     pr_files = [f for f in os.listdir(pulls_dir) if f.endswith(".json")]
@@ -306,6 +327,40 @@ def main():
                 if gap > longest_gap:
                     longest_gap = gap
 
+        # Collect review age events and reviews-received-by-author for clustering analysis
+        created_dt_for_age = datetime.fromisoformat(created_date.replace("Z", "+00:00"))
+        for ev in events:
+            etype = ev.get("event", "")
+            if etype not in ("reviewed", "commented"):
+                continue
+            ev_user = (ev.get("user") or {}).get("login")
+            if ev_user:
+                ev_user = map_username(ev_user)
+            if ev_user in _IGNORE_USERS or ev_user == author:
+                continue
+            ts = ev.get("created_at") or ""
+            if ts and len(ts) >= 10:
+                ev_dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                age_days = (ev_dt - created_dt_for_age).total_seconds() / 86400
+                review_age_events.append((ts, age_days))
+                keys = period_keys(ts)
+                for tf_key, period in keys.items():
+                    reviews_received[tf_key][period][author] += 1
+        for c in comments:
+            c_user = (c.get("user") or {}).get("login")
+            if c_user:
+                c_user = map_username(c_user)
+            if c_user in _IGNORE_USERS or c_user == author:
+                continue
+            ts = c.get("created_at") or ""
+            if ts and len(ts) >= 10:
+                ev_dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                age_days = (ev_dt - created_dt_for_age).total_seconds() / 86400
+                review_age_events.append((ts, age_days))
+                keys = period_keys(ts)
+                for tf_key, period in keys.items():
+                    reviews_received[tf_key][period][author] += 1
+
         pr_number = str(pull["number"])
         pr_title = (pull.get("title") or "")[:100]
         pr_closed_at = pull.get("closed_at")
@@ -440,6 +495,26 @@ def main():
             a for a, _ in sorted(global_author_counts.items(), key=lambda x: -x[1])[:5]
         )
 
+        # Review clustering by PR age: bucket review events by PR age at review time
+        _AGE_BUCKETS = [
+            (0, 7, "<1w"),
+            (7, 30, "1-4w"),
+            (30, 90, "1-3m"),
+            (90, 180, "3-6m"),
+            (180, 365, "6-12m"),
+            (365, 730, "1-2y"),
+            (730, 1e9, "2y+"),
+        ]
+        _AGE_BUCKET_LABELS = [label for _, _, label in _AGE_BUCKETS]
+        review_by_pr_age = defaultdict(lambda: defaultdict(int))  # period -> bucket_label -> count
+        for review_date_str, age_days in review_age_events:
+            keys = period_keys(review_date_str)
+            period = keys[tf]
+            for lo, hi, label in _AGE_BUCKETS:
+                if lo <= age_days < hi:
+                    review_by_pr_age[period][label] += 1
+                    break
+
         timeframes[tf] = {
             "periods": all_periods,
             "unique_author_counts": {p: len(merged_authors_by_period.get(p, set())) for p in all_periods},
@@ -492,8 +567,13 @@ def main():
                 for bucket in ("S", "M", "L")
             },
             "contributor_stats": _build_contributor_stats(
-                author_period_stats, closed_by_author_period, comment_counts[tf]
+                author_period_stats, closed_by_author_period, comment_counts[tf], reviews_received[tf]
             ),
+            "review_by_pr_age_buckets": _AGE_BUCKET_LABELS,
+            "review_by_pr_age": {
+                p: {label: review_by_pr_age.get(p, {}).get(label, 0) for label in _AGE_BUCKET_LABELS}
+                for p in all_periods
+            },
         }
 
     output = {
