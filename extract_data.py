@@ -11,10 +11,6 @@ import sys
 from collections import defaultdict
 from datetime import datetime
 
-BACKUP_DIR = os.path.expanduser("~/workspace/github-metadata-backup-bitcoin-bitcoin")
-PULLS_DIR = os.path.join(BACKUP_DIR, "pulls")
-ISSUES_DIR = os.path.join(BACKUP_DIR, "issues")
-
 COMMENT_THRESHOLD = 100
 
 # Global username mapping (old_name -> new_name), loaded from CLI arg
@@ -78,10 +74,18 @@ def main():
 
     parser = argparse.ArgumentParser(description="Extract GitHub PR stats into JSON for visualization.")
     parser.add_argument(
+        "metadata_repo",
+        help="Path to the github-metadata-backup repository",
+    )
+    parser.add_argument(
         "--username-map",
         help="Path to JSON file mapping old usernames to new ones: {\"old\": \"new\", ...}",
     )
     args = parser.parse_args()
+
+    backup_dir = args.metadata_repo
+    pulls_dir = os.path.join(backup_dir, "pulls")
+    issues_dir = os.path.join(backup_dir, "issues")
 
     if args.username_map:
         with open(args.username_map) as f:
@@ -103,13 +107,13 @@ def main():
     }
 
     # --- Read PRs ---
-    pr_files = [f for f in os.listdir(PULLS_DIR) if f.endswith(".json")]
+    pr_files = [f for f in os.listdir(pulls_dir) if f.endswith(".json")]
     total_pr = len(pr_files)
     for i, fname in enumerate(pr_files):
         if (i + 1) % 1000 == 0:
             print(f"  Reading PR {i + 1}/{total_pr}...", file=sys.stderr)
 
-        with open(os.path.join(PULLS_DIR, fname)) as f:
+        with open(os.path.join(pulls_dir, fname)) as f:
             data = json.load(f)
 
         pull = data["pull"]
@@ -143,13 +147,13 @@ def main():
                 merge_actors.append((merge_date, map_username(merger)))
 
     # --- Read issues ---
-    issue_files = [f for f in os.listdir(ISSUES_DIR) if f.endswith(".json")]
+    issue_files = [f for f in os.listdir(issues_dir) if f.endswith(".json")]
     total_issues = len(issue_files)
     for i, fname in enumerate(issue_files):
         if (i + 1) % 1000 == 0:
             print(f"  Reading issue {i + 1}/{total_issues}...", file=sys.stderr)
 
-        with open(os.path.join(ISSUES_DIR, fname)) as f:
+        with open(os.path.join(issues_dir, fname)) as f:
             data = json.load(f)
 
         events = data.get("events", [])
