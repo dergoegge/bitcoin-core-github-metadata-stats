@@ -104,6 +104,19 @@
       </div>
     </div>
 
+    <!-- PR Stats -->
+    <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-10">
+      <h2 class="text-lg font-semibold mb-1">PR Stats</h2>
+      <p class="text-gray-500 text-sm mb-4">Activity heatmap for individual pull requests</p>
+      <div class="flex gap-2 mb-4">
+        <input type="text" id="prSearch" placeholder="Search by PR number or title..."
+          class="flex-1 bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+      </div>
+      <select id="selectPR" class="mb-4 w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"></select>
+      <div id="prSummary" class="text-sm text-gray-300 mb-6"></div>
+      <div id="prActivityGraph" class="overflow-x-auto"></div>
+    </div>
+
     <!-- Detail lists -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
       <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
@@ -514,6 +527,260 @@
         }
         renderContributor(defaultAuthor);
         selectEl.onchange = () => renderContributor(selectEl.value);
+      }
+
+      // PR Stats section — activity heatmap per PR
+      {
+        const prStats = DATA.pr_activity || {};
+        const prNumbers = Object.keys(prStats);
+        // Sort by PR number descending (most recent first)
+        prNumbers.sort((a, b) => parseInt(b) - parseInt(a));
+
+        const searchEl = document.getElementById('prSearch');
+        const selectPREl = document.getElementById('selectPR');
+        const prSummaryEl = document.getElementById('prSummary');
+        const prGraphEl = document.getElementById('prActivityGraph');
+
+        let filteredPRs = prNumbers.slice();
+
+        function populatePRDropdown(list) {
+          // Limit to first 500 to keep the DOM reasonable
+          const show = list.slice(0, 500);
+          selectPREl.innerHTML = show.map(n => {
+            const pr = prStats[n];
+            const state = pr.merged ? 'merged' : (pr.closed ? 'closed' : 'open');
+            return `<option value="${n}">#${n} ${pr.title} (${pr.author}, ${state})</option>`;
+          }).join('');
+          if (list.length > 500) {
+            selectPREl.innerHTML += `<option disabled>... ${list.length - 500} more (search to narrow)</option>`;
+          }
+        }
+
+        populatePRDropdown(filteredPRs);
+
+        searchEl.oninput = () => {
+          const q = searchEl.value.trim().toLowerCase();
+          if (!q) {
+            filteredPRs = prNumbers.slice();
+          } else {
+            filteredPRs = prNumbers.filter(n => {
+              const pr = prStats[n];
+              return n.includes(q) || pr.title.toLowerCase().includes(q) || pr.author.toLowerCase().includes(q);
+            });
+          }
+          populatePRDropdown(filteredPRs);
+          if (filteredPRs.length) renderPRStats(filteredPRs[0]);
+        };
+
+        function renderPRStats(prNum) {
+          const pr = prStats[prNum];
+          if (!pr) {
+            prSummaryEl.innerHTML = '<p class="text-gray-500">No data.</p>';
+            prGraphEl.innerHTML = '';
+            return;
+          }
+          const state = pr.merged ? 'Merged' : (pr.closed ? 'Closed' : 'Open');
+          const stateColor = pr.merged ? 'text-purple-400' : (pr.closed ? 'text-red-400' : 'text-green-400');
+          function dayTotal(cats) { return Object.values(cats).reduce((s, v) => s + v, 0); }
+          const totalEvents = Object.values(pr.activity).reduce((s, v) => s + dayTotal(v), 0);
+          const activeDays = Object.keys(pr.activity).length;
+          const firstResp = pr.first_response_days;
+          const firstRespText = firstResp === null ? 'None' : firstResp < 1 ? '<1d' : firstResp + 'd';
+
+          prSummaryEl.innerHTML = `
+            <div class="flex flex-wrap gap-x-6 gap-y-2 items-center mb-4">
+              <a href="https://github.com/bitcoin/bitcoin/pull/${prNum}" target="_blank" rel="noopener"
+                class="text-blue-400 hover:underline font-medium">#${prNum}</a>
+              <span class="${stateColor} font-medium">${state}</span>
+              <span>by <a href="https://github.com/${pr.author}" target="_blank" rel="noopener"
+                class="text-blue-400 hover:underline">${pr.author}</a></span>
+              <span class="text-gray-500">Created ${pr.created}</span>
+              ${pr.closed ? `<span class="text-gray-500">${pr.merged ? 'Merged' : 'Closed'} ${pr.closed}</span>` : ''}
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div class="bg-gray-800 rounded-lg p-4">
+                <p class="text-gray-400 text-xs">Participants</p>
+                <p class="text-xl font-bold text-white mt-1">${pr.participants}</p>
+                <p class="text-gray-500 text-xs mt-1">unique non-author</p>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-4">
+                <p class="text-gray-400 text-xs">First Response</p>
+                <p class="text-xl font-bold ${firstResp === null ? 'text-red-400' : firstResp <= 1 ? 'text-green-400' : firstResp <= 7 ? 'text-yellow-400' : 'text-orange-400'} mt-1">${firstRespText}</p>
+                <p class="text-gray-500 text-xs mt-1">time to first review</p>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-4">
+                <p class="text-gray-400 text-xs">Comments Received</p>
+                <p class="text-xl font-bold text-white mt-1">${pr.comments_received}</p>
+                <p class="text-gray-500 text-xs mt-1">reviews + comments</p>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-4">
+                <p class="text-gray-400 text-xs">Author Follow-ups</p>
+                <p class="text-xl font-bold ${pr.author_updates > 0 ? 'text-green-400' : 'text-gray-500'} mt-1">${pr.author_updates}</p>
+                <p class="text-gray-500 text-xs mt-1">pushes/commits after open</p>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-4">
+                <p class="text-gray-400 text-xs">Longest Gap</p>
+                <p class="text-xl font-bold ${pr.longest_gap_days > 90 ? 'text-red-400' : pr.longest_gap_days > 30 ? 'text-orange-400' : 'text-white'} mt-1">${pr.longest_gap_days}d</p>
+                <p class="text-gray-500 text-xs mt-1">between active days</p>
+              </div>
+            </div>`;
+
+          renderActivityHeatmap(pr, prGraphEl);
+        }
+
+        function renderActivityHeatmap(pr, container) {
+          const activity = pr.activity || {};
+          const dates = Object.keys(activity).sort();
+          if (!dates.length) {
+            container.innerHTML = '<p class="text-gray-500">No activity data.</p>';
+            return;
+          }
+
+          // Date range: from created_at to last activity (or closed_at, whichever is later)
+          const startDate = new Date(pr.created + 'T00:00:00');
+          let endStr = dates[dates.length - 1];
+          if (pr.closed && pr.closed > endStr) endStr = pr.closed;
+          const endDate = new Date(endStr + 'T00:00:00');
+
+          // Align start to previous Sunday
+          const start = new Date(startDate);
+          start.setDate(start.getDate() - start.getDay());
+
+          // Align end to next Saturday
+          const end = new Date(endDate);
+          end.setDate(end.getDate() + (6 - end.getDay()));
+
+          // Build weeks grid
+          const weeks = [];
+          let current = new Date(start);
+          let week = [];
+          while (current <= end) {
+            const y = current.getFullYear();
+            const m = String(current.getMonth() + 1).padStart(2, '0');
+            const d = String(current.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+            const cats = activity[dateStr] || {};
+            const count = Object.values(cats).reduce((s, v) => s + v, 0);
+            week.push({ date: dateStr, count, cats, day: current.getDay(), dayOfMonth: current.getDate(), month: current.getMonth() });
+            if (week.length === 7) {
+              weeks.push(week);
+              week = [];
+            }
+            current.setDate(current.getDate() + 1);
+          }
+          if (week.length) weeks.push(week);
+
+          // Color levels based on total counts per day
+          const dayCounts = Object.values(activity).map(cats => Object.values(cats).reduce((s, v) => s + v, 0));
+          const maxCount = Math.max(...dayCounts, 1);
+          const levels = [
+            Math.ceil(maxCount * 0.25),
+            Math.ceil(maxCount * 0.5),
+            Math.ceil(maxCount * 0.75),
+          ];
+
+          function getColor(count) {
+            if (count === 0) return '#2d333b';
+            if (count <= levels[0]) return '#0e4429';
+            if (count <= levels[1]) return '#006d32';
+            if (count <= levels[2]) return '#26a641';
+            return '#39d353';
+          }
+
+          const cellSize = 12;
+          const gap = 2;
+          const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          const dayLabels = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+
+          // Tooltip element (shared, positioned on hover)
+          const tooltipId = 'pr-heatmap-tooltip';
+
+          let html = `<div style="position:relative;">`;
+          html += '<div style="display: inline-flex; gap: 4px;">';
+
+          // Day-of-week labels
+          html += `<div style="display: flex; flex-direction: column; gap: ${gap}px; padding-top: 20px;">`;
+          for (let d = 0; d < 7; d++) {
+            html += `<div style="width: 28px; height: ${cellSize}px; line-height: ${cellSize}px; font-size: 10px; color: #8b949e;">${dayLabels[d]}</div>`;
+          }
+          html += '</div>';
+
+          // Week columns
+          html += `<div style="display: flex; gap: ${gap}px;">`;
+          for (let w = 0; w < weeks.length; w++) {
+            html += `<div style="display: flex; flex-direction: column; gap: ${gap}px;">`;
+            const firstCell = weeks[w][0];
+            const showMonth = firstCell.dayOfMonth <= 7;
+            html += `<div style="height: 18px; font-size: 10px; color: #8b949e; white-space: nowrap;">${showMonth ? monthNames[firstCell.month] : ''}</div>`;
+
+            for (let d = 0; d < weeks[w].length; d++) {
+              const cell = weeks[w][d];
+              const color = getColor(cell.count);
+              // Encode event categories as a data attribute
+              const catsJson = cell.count > 0 ? JSON.stringify(cell.cats).replace(/"/g, '&quot;') : '';
+              html += `<div data-date="${cell.date}" data-cats="${catsJson}" data-count="${cell.count}"
+                style="width:${cellSize}px;height:${cellSize}px;background:${color};border-radius:2px;"></div>`;
+            }
+            html += '</div>';
+          }
+          html += '</div></div>';
+
+          // Tooltip div
+          html += `<div id="${tooltipId}" style="display:none;position:fixed;z-index:50;pointer-events:none;
+            background:#1c2128;border:1px solid #444c56;border-radius:6px;padding:8px 12px;font-size:12px;color:#e6edf3;
+            box-shadow:0 4px 12px rgba(0,0,0,0.4);white-space:nowrap;"></div>`;
+
+          // Legend
+          html += `<div style="display:flex;align-items:center;gap:4px;margin-top:8px;font-size:11px;color:#8b949e;">
+            <span>Less</span>
+            <div style="width:${cellSize}px;height:${cellSize}px;background:#2d333b;border-radius:2px;"></div>
+            <div style="width:${cellSize}px;height:${cellSize}px;background:#0e4429;border-radius:2px;"></div>
+            <div style="width:${cellSize}px;height:${cellSize}px;background:#006d32;border-radius:2px;"></div>
+            <div style="width:${cellSize}px;height:${cellSize}px;background:#26a641;border-radius:2px;"></div>
+            <div style="width:${cellSize}px;height:${cellSize}px;background:#39d353;border-radius:2px;"></div>
+            <span>More</span>
+          </div>`;
+          html += '</div>';
+
+          container.innerHTML = html;
+
+          // Attach hover listeners for the custom tooltip
+          const tooltip = document.getElementById(tooltipId);
+          container.addEventListener('mouseover', e => {
+            const el = e.target;
+            if (!el.dataset || !el.dataset.date) return;
+            const date = el.dataset.date;
+            const count = parseInt(el.dataset.count);
+            if (count === 0) {
+              let tip = `<strong>${date}</strong><br><span style="color:#8b949e;">No activity</span>`;
+              tooltip.innerHTML = tip;
+            } else {
+              const cats = JSON.parse(el.dataset.cats);
+              let tip = `<strong>${date}</strong><br>`;
+              // Sort categories by count descending
+              const entries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+              for (const [cat, n] of entries) {
+                tip += `<span style="color:#8b949e;">${n} ${cat}</span><br>`;
+              }
+              tooltip.innerHTML = tip;
+            }
+            tooltip.style.display = 'block';
+            const rect = el.getBoundingClientRect();
+            tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+            tooltip.style.top = (rect.top - 8) + 'px';
+            tooltip.style.transform = 'translate(-50%, -100%)';
+          });
+          container.addEventListener('mouseout', e => {
+            if (e.target.dataset && e.target.dataset.date) {
+              tooltip.style.display = 'none';
+            }
+          });
+        }
+
+        if (prNumbers.length) {
+          renderPRStats(prNumbers[0]);
+        }
+        selectPREl.onchange = () => renderPRStats(selectPREl.value);
       }
     }
 

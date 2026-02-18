@@ -13,6 +13,15 @@ from datetime import datetime
 
 COMMENT_THRESHOLD = 100
 
+# Event types to skip when counting PR activity (non-meaningful noise)
+_SKIP_ACTIVITY_EVENTS = frozenset({
+    "subscribed", "mentioned", "referenced", "cross-referenced",
+    "locked", "unlocked",
+})
+
+# Bots to ignore for PR engagement metrics and activity heatmap
+_IGNORE_USERS = frozenset({"DrahtBot"})
+
 # Global username mapping (old_name -> new_name), loaded from CLI arg
 USERNAME_MAP = {}
 
@@ -160,6 +169,9 @@ def main():
         "month": defaultdict(lambda: defaultdict(int)),
     }
 
+    # Per-PR activity data for heatmaps
+    pr_activity = {}
+
     # --- Read PRs ---
     pr_files = [f for f in os.listdir(pulls_dir) if f.endswith(".json")]
     total_pr = len(pr_files)
@@ -205,6 +217,111 @@ def main():
             close_date = close_event["created_at"]
             keys = period_keys(close_date)
             closed_prs.append((close_date, author, keys))
+
+        # Collect per-PR daily activity for heatmap (per-event-type counts)
+        # daily_activity[date][category] = count
+        daily_activity = defaultdict(lambda: defaultdict(int))
+        _EVENT_CATEGORY = {
+            "committed": "commits",
+            "commented": "comments",
+            "reviewed": "reviews",
+            "head_ref_force_pushed": "pushes",
+            "merged": "merged",
+            "closed": "closed",
+            "reopened": "reopened",
+        }
+
+        # Also collect engagement metrics
+        participants = set()  # non-author users
+        first_response_ts = None  # earliest non-author event timestamp
+        comments_received = 0  # non-author comments + reviews
+        author_updates = 0  # author pushes/commits after creation day
+        created_day = created_date[:10]
+
+        for ev in events:
+            etype = ev.get("event", "")
+            if etype in _SKIP_ACTIVITY_EVENTS:
+                continue
+
+            # Resolve event user
+            ev_user = None
+            if etype == "committed":
+                ev_user = (ev.get("author") or {}).get("login")
+            else:
+                ev_user = (ev.get("user") or ev.get("actor") or {}).get("login")
+            if ev_user:
+                ev_user = map_username(ev_user)
+
+            # Skip ignored bots entirely for PR stats
+            if ev_user in _IGNORE_USERS:
+                continue
+
+            date_str = ev.get("created_at") or ""
+            if etype == "committed":
+                date_str = (ev.get("committer") or {}).get("date") or ""
+            if date_str and len(date_str) >= 10:
+                cat = _EVENT_CATEGORY.get(etype, "other")
+                daily_activity[date_str[:10]][cat] += 1
+
+            # Engagement tracking
+            if ev_user and ev_user != author:
+                participants.add(ev_user)
+                if etype in ("commented", "reviewed"):
+                    comments_received += 1
+                if date_str and len(date_str) >= 10:
+                    if first_response_ts is None or date_str < first_response_ts:
+                        first_response_ts = date_str
+            elif ev_user == author:
+                if etype in ("committed", "head_ref_force_pushed") and date_str[:10] > created_day:
+                    author_updates += 1
+
+        for c in comments:
+            c_user = (c.get("user") or {}).get("login")
+            if c_user:
+                c_user = map_username(c_user)
+            if c_user in _IGNORE_USERS:
+                continue
+            date_str = c.get("created_at") or ""
+            if date_str and len(date_str) >= 10:
+                daily_activity[date_str[:10]]["review comments"] += 1
+            if c_user and c_user != author:
+                participants.add(c_user)
+                comments_received += 1
+
+        # Compute time to first response (days)
+        first_response_days = None
+        if first_response_ts:
+            created_dt = datetime.fromisoformat(created_date.replace("Z", "+00:00"))
+            response_dt = datetime.fromisoformat(first_response_ts.replace("Z", "+00:00"))
+            first_response_days = round((response_dt - created_dt).total_seconds() / 86400, 1)
+
+        # Compute longest gap between consecutive active days
+        active_days = sorted(daily_activity.keys())
+        longest_gap = 0
+        if len(active_days) >= 2:
+            for j in range(1, len(active_days)):
+                prev = datetime.fromisoformat(active_days[j - 1])
+                curr = datetime.fromisoformat(active_days[j])
+                gap = (curr - prev).days
+                if gap > longest_gap:
+                    longest_gap = gap
+
+        pr_number = str(pull["number"])
+        pr_title = (pull.get("title") or "")[:100]
+        pr_closed_at = pull.get("closed_at")
+        pr_activity[pr_number] = {
+            "title": pr_title,
+            "author": author,
+            "created": created_date[:10],
+            "closed": pr_closed_at[:10] if pr_closed_at else None,
+            "merged": merge_event is not None,
+            "activity": {date: dict(cats) for date, cats in daily_activity.items()},
+            "participants": len(participants),
+            "first_response_days": first_response_days,
+            "comments_received": comments_received,
+            "author_updates": author_updates,
+            "longest_gap_days": longest_gap,
+        }
 
     # --- Read issues ---
     issue_files = [f for f in os.listdir(issues_dir) if f.endswith(".json")]
@@ -382,6 +499,7 @@ def main():
     output = {
         "comment_threshold": COMMENT_THRESHOLD,
         "timeframes": timeframes,
+        "pr_activity": pr_activity,
     }
 
     out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
