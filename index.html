@@ -27,70 +27,75 @@
 
     <!-- Charts -->
     <div class="space-y-8 mb-10">
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-4">Unique PR Authors</h2>
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider pt-2">Activity Overview</h3>
+      <div id="unique-pr-authors" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-4">Unique PR Authors <a href="#unique-pr-authors" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
         <div class="relative overflow-x-auto"><div id="wrapUnique"><canvas id="chartUnique"></canvas></div></div>
       </div>
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-1">All PR Authors Breakdown</h2>
+      <div id="pr-authors-breakdown" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">All PR Authors Breakdown <a href="#pr-authors-breakdown" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
         <p class="text-gray-500 text-sm mb-4">Authors with merged PRs (returning + first-time) and authors whose PRs were not merged</p>
         <div class="relative overflow-x-auto"><div id="wrapCombined"><canvas id="chartCombined"></canvas></div></div>
       </div>
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-1">Contributors with Merge Access</h2>
-        <p class="text-gray-500 text-sm mb-4">People who merged at least one PR during each period</p>
-        <div class="relative overflow-x-auto"><div id="wrapMergeAccess"><canvas id="chartMergeAccess"></canvas></div></div>
-      </div>
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-1">Merged PRs by Merger</h2>
-        <p class="text-gray-500 text-sm mb-4">Number of PRs merged, broken down by who performed the merge</p>
-        <div class="relative overflow-x-auto"><div id="wrapMergedBy"><canvas id="chartMergedBy"></canvas></div></div>
-      </div>
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-1">Average Time to Merge</h2>
-        <p class="text-gray-500 text-sm mb-4">Mean, mean excluding top 5 authors by PR count, mean excluding maintainers, and median days from PR creation to merge</p>
-        <div class="relative overflow-x-auto"><div id="wrapTTM"><canvas id="chartTTM"></canvas></div></div>
-      </div>
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-1">Time to Merge by PR Size</h2>
-        <p class="text-gray-500 text-sm mb-4">Mean days to merge by patch size: S (&le;50 lines), M (51-500), L (&gt;500)</p>
-        <div class="relative overflow-x-auto"><div id="wrapTTMSize"><canvas id="chartTTMSize"></canvas></div></div>
-      </div>
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-1">Merged PRs by Author</h2>
+      <div id="merged-prs-by-author" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">Merged PRs by Author <a href="#merged-prs-by-author" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
         <p class="text-gray-500 text-sm mb-4">Number of merged PRs broken down by PR author (top 15 + others)</p>
         <div class="relative overflow-x-auto"><div id="wrapPRsByAuthor"><canvas id="chartPRsByAuthor"></canvas></div></div>
       </div>
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-1">Comment Authors with &gt;<span id="thresholdLabel"></span> Comments</h2>
-        <p class="text-gray-500 text-sm mb-4">Counts comments on both PRs and issues (issue comments, review comments, and code reviews)</p>
-        <div class="relative overflow-x-auto"><div id="wrapCommenters"><canvas id="chartCommenters"></canvas></div></div>
-      </div>
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-1">Review Activity by PR Age</h2>
-        <p class="text-gray-500 text-sm mb-4">Where does review effort go? Reviews and comments bucketed by PR age at time of review (excludes PR author's own activity)</p>
-        <div class="relative overflow-x-auto"><div id="wrapReviewAge"><canvas id="chartReviewAge"></canvas></div></div>
-      </div>
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-1">Reviews Received by Author</h2>
-        <p class="text-gray-500 text-sm mb-4">Review comments received on PRs, broken down by PR author (top 15 + others, excludes author's own comments)</p>
-        <div class="relative overflow-x-auto"><div id="wrapReviewsRecvByAuthor"><canvas id="chartReviewsRecvByAuthor"></canvas></div></div>
-      </div>
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-1">PR Labels</h2>
+      <div id="pr-labels" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">PR Labels <a href="#pr-labels" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
         <p class="text-gray-500 text-sm mb-4">Label usage on pull requests over time (by PR creation date, top 15 + others)</p>
         <div class="relative overflow-x-auto"><div id="wrapLabelsPR"><canvas id="chartLabelsPR"></canvas></div></div>
       </div>
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 class="text-lg font-semibold mb-1">Issue Labels</h2>
+      <div id="issue-labels" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">Issue Labels <a href="#issue-labels" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
         <p class="text-gray-500 text-sm mb-4">Label usage on issues over time (by issue creation date, top 15 + others)</p>
         <div class="relative overflow-x-auto"><div id="wrapLabelsIssue"><canvas id="chartLabelsIssue"></canvas></div></div>
+      </div>
+
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider pt-2">Merge Process</h3>
+      <div id="merge-access" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">Contributors with Merge Access <a href="#merge-access" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
+        <p class="text-gray-500 text-sm mb-4">People who merged at least one PR during each period</p>
+        <div class="relative overflow-x-auto"><div id="wrapMergeAccess"><canvas id="chartMergeAccess"></canvas></div></div>
+      </div>
+      <div id="merged-prs-by-merger" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">Merged PRs by Merger <a href="#merged-prs-by-merger" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
+        <p class="text-gray-500 text-sm mb-4">Number of PRs merged, broken down by who performed the merge</p>
+        <div class="relative overflow-x-auto"><div id="wrapMergedBy"><canvas id="chartMergedBy"></canvas></div></div>
+      </div>
+      <div id="avg-time-to-merge" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">Average Time to Merge <a href="#avg-time-to-merge" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
+        <p class="text-gray-500 text-sm mb-4">Mean, mean excluding top 5 authors by PR count, mean excluding maintainers, and median days from PR creation to merge</p>
+        <div class="relative overflow-x-auto"><div id="wrapTTM"><canvas id="chartTTM"></canvas></div></div>
+      </div>
+      <div id="ttm-by-size" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">Time to Merge by PR Size <a href="#ttm-by-size" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
+        <p class="text-gray-500 text-sm mb-4">Mean days to merge by patch size: S (&le;50 lines), M (51-500), L (&gt;500)</p>
+        <div class="relative overflow-x-auto"><div id="wrapTTMSize"><canvas id="chartTTMSize"></canvas></div></div>
+      </div>
+
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider pt-2">Review Activity</h3>
+      <div id="comment-authors" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">Comment Authors with &gt;<span id="thresholdLabel"></span> Comments <a href="#comment-authors" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
+        <p class="text-gray-500 text-sm mb-4">Counts comments on both PRs and issues (issue comments, review comments, and code reviews)</p>
+        <div class="relative overflow-x-auto"><div id="wrapCommenters"><canvas id="chartCommenters"></canvas></div></div>
+      </div>
+      <div id="review-by-pr-age" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">Review Activity by PR Age <a href="#review-by-pr-age" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
+        <p class="text-gray-500 text-sm mb-4">Where does review effort go? Reviews and comments bucketed by PR age at time of review (excludes PR author's own activity)</p>
+        <div class="relative overflow-x-auto"><div id="wrapReviewAge"><canvas id="chartReviewAge"></canvas></div></div>
+      </div>
+      <div id="reviews-received-by-author" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">Reviews Received by Author <a href="#reviews-received-by-author" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
+        <p class="text-gray-500 text-sm mb-4">Review comments received on PRs, broken down by PR author (top 15 + others, excludes author's own comments)</p>
+        <div class="relative overflow-x-auto"><div id="wrapReviewsRecvByAuthor"><canvas id="chartReviewsRecvByAuthor"></canvas></div></div>
       </div>
     </div>
 
     <!-- Data table -->
-    <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-10 overflow-x-auto">
-      <h2 class="text-lg font-semibold mb-4">Breakdown</h2>
+    <div id="breakdown" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 mb-10 overflow-x-auto scroll-mt-6">
+      <h2 class="text-lg font-semibold mb-4">Breakdown <a href="#breakdown" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
       <div class="max-h-[28rem] overflow-y-auto">
         <table class="w-full text-sm">
           <thead class="sticky top-0 bg-gray-900 z-10">
@@ -113,8 +118,8 @@
     </div>
 
     <!-- Contributor stats -->
-    <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-10">
-      <h2 class="text-lg font-semibold mb-1">Contributor Stats</h2>
+    <div id="contributor-stats" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 mb-10 scroll-mt-6">
+      <h2 class="text-lg font-semibold mb-1">Contributor Stats <a href="#contributor-stats" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
       <p class="text-gray-500 text-sm mb-4">Per-contributor averages per period across merged PRs</p>
       <select id="selectContributor" class="mb-4 w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"></select>
       <div id="contributorSummary" class="text-sm text-gray-300 mb-6"></div>
@@ -202,6 +207,21 @@
     let chartPercentMode = {};  // canvasId -> bool
     let chartRenderParams = {}; // canvasId -> params (for re-render on toggle)
 
+    function readUrlState() {
+      const params = new URLSearchParams(window.location.search);
+      const tf = params.get('tf');
+      if (tf && TIMEFRAMES.some(t => t.key === tf)) activeTF = tf;
+      const repo = params.get('repo');
+      if (repo && REPOS.some(r => r.key === repo)) activeRepo = repo;
+    }
+
+    function updateUrlState() {
+      const params = new URLSearchParams();
+      params.set('tf', activeTF);
+      params.set('repo', activeRepo);
+      history.replaceState(null, '', '?' + params.toString());
+    }
+
     function buildRepoPicker() {
       const el = document.getElementById('repoPicker');
       el.innerHTML = REPOS.map(r =>
@@ -209,6 +229,7 @@
       ).join('');
       el.onchange = () => {
         activeRepo = el.value;
+        updateUrlState();
         loadRepo(activeRepo);
       };
     }
@@ -231,9 +252,16 @@
             document.getElementById('dataTimestamp').textContent = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
           }
           renderAll();
+          if (window.location.hash) {
+            setTimeout(() => {
+              const el = document.querySelector(window.location.hash);
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+          }
         });
     }
 
+    readUrlState();
     buildRepoPicker();
     buildTimeframePicker();
     loadRepo(activeRepo);
@@ -248,6 +276,7 @@
         const btn = e.target.closest('[data-tf]');
         if (!btn || btn.dataset.tf === activeTF) return;
         activeTF = btn.dataset.tf;
+        updateUrlState();
         buildTimeframePicker();
         renderAll();
       };
@@ -287,7 +316,7 @@
         card('Peak (Commenters)', `${labels[peakProlificIdx]} (${prolific[peakProlificIdx]})`, `Period with most >${threshold} commenters`),
       ].join('');
 
-      // Charts
+      // Charts — Activity Overview
       renderChart('chartUnique', 'wrapUnique', {
         labels, minBarWidth, stacked: true,
         datasets: [
@@ -304,74 +333,6 @@
           { label: 'Without Merge', data: noMerge, backgroundColor: COLORS.red, borderRadius: 4 },
         ],
       });
-
-      renderChart('chartMergeAccess', 'wrapMergeAccess', {
-        labels, minBarWidth,
-        datasets: [{ label: 'Merge Access', data: mergeAccess, backgroundColor: COLORS.green, borderRadius: 4 }],
-      });
-
-      // Merged PRs by merger — stacked bar, one dataset per person
-      {
-        const allMergers = new Map(); // merger -> total count (for sorting)
-        for (const p of periods) {
-          const actors = tf.merges_by_actor[p] || {};
-          for (const [u, c] of Object.entries(actors)) {
-            allMergers.set(u, (allMergers.get(u) || 0) + c);
-          }
-        }
-        // Sort by total descending
-        const sorted = [...allMergers.entries()].sort((a, b) => b[1] - a[1]);
-        const palette = [
-          'rgb(59, 130, 246)', 'rgb(249, 115, 22)', 'rgb(34, 197, 94)', 'rgb(168, 85, 247)',
-          'rgb(236, 72, 153)', 'rgb(234, 179, 8)', 'rgb(20, 184, 166)', 'rgb(239, 68, 68)',
-          'rgb(99, 102, 241)', 'rgb(244, 114, 182)', 'rgb(45, 212, 191)', 'rgb(251, 146, 60)',
-          'rgb(129, 140, 248)', 'rgb(74, 222, 128)', 'rgb(232, 121, 249)', 'rgb(252, 211, 77)',
-        ];
-        const datasets = sorted.map(([merger, _], idx) => ({
-          label: merger,
-          data: periods.map(p => (tf.merges_by_actor[p] || {})[merger] || 0),
-          backgroundColor: palette[idx % palette.length],
-          borderRadius: 4,
-        }));
-        renderChart('chartMergedBy', 'wrapMergedBy', {
-          labels, minBarWidth, stacked: true, datasets,
-        });
-      }
-
-      // Average time to merge — line chart with mean + median + filtered means
-      {
-        const avgTTM = periods.map(p => tf.avg_time_to_merge[p] || 0);
-        const medTTM = periods.map(p => tf.median_time_to_merge[p] || 0);
-        const avgTTMExcl = periods.map(p => tf.avg_time_to_merge_excl_top5[p] || 0);
-        const avgTTMExclMaint = periods.map(p => tf.avg_time_to_merge_excl_maintainers[p] || 0);
-        renderChart('chartTTM', 'wrapTTM', {
-          labels, minBarWidth, type: 'line',
-          datasets: [
-            { label: 'Mean (days)', data: avgTTM, borderColor: COLORS.blue, backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
-            { label: 'Mean excl. top 5 authors (days)', data: avgTTMExcl, borderColor: COLORS.green, backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
-            { label: 'Mean excl. maintainers (days)', data: avgTTMExclMaint, borderColor: COLORS.purple, backgroundColor: 'rgba(168,85,247,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
-            { label: 'Median (days)', data: medTTM, borderColor: COLORS.orange, backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
-          ],
-          yTitle: 'Days',
-        });
-      }
-
-      // Time to merge by PR size — line chart with S/M/L buckets
-      {
-        const ttmSize = tf.ttm_by_size || {};
-        const sData = periods.map(p => (ttmSize.S || {})[p] || 0);
-        const mData = periods.map(p => (ttmSize.M || {})[p] || 0);
-        const lData = periods.map(p => (ttmSize.L || {})[p] || 0);
-        renderChart('chartTTMSize', 'wrapTTMSize', {
-          labels, minBarWidth, type: 'line',
-          datasets: [
-            { label: 'Small (\u226450 lines)', data: sData, borderColor: COLORS.green, backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
-            { label: 'Medium (51-500)', data: mData, borderColor: COLORS.orange, backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
-            { label: 'Large (>500)', data: lData, borderColor: COLORS.red, backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
-          ],
-          yTitle: 'Days',
-        });
-      }
 
       // Merged PRs by author — stacked bar, top 15 + Others
       {
@@ -398,7 +359,6 @@
           backgroundColor: palette[idx % palette.length],
           borderRadius: 4,
         }));
-        // "Others" bucket
         datasets.push({
           label: 'Others',
           data: periods.map(p => {
@@ -410,82 +370,6 @@
         });
         renderChart('chartPRsByAuthor', 'wrapPRsByAuthor', {
           labels, minBarWidth, stacked: true, datasets,
-        });
-      }
-
-      renderChart('chartCommenters', 'wrapCommenters', {
-        labels, minBarWidth,
-        datasets: [{ label: `Commenters >${threshold}`, data: prolific, backgroundColor: COLORS.purple, borderRadius: 4 }],
-      });
-
-      // Review activity by PR age — stacked bar
-      {
-        const buckets = tf.review_by_pr_age_buckets || [];
-        const agePalette = [
-          'rgb(34, 197, 94)',    // <1w  — green (fresh)
-          'rgb(74, 222, 128)',   // 1-4w — light green
-          'rgb(234, 179, 8)',    // 1-3m — yellow
-          'rgb(249, 115, 22)',   // 3-6m — orange
-          'rgb(239, 68, 68)',    // 6-12m — red
-          'rgb(168, 85, 247)',   // 1-2y — purple
-          'rgb(107, 114, 128)',  // 2y+  — gray
-        ];
-        const bucketLabels = {
-          '<1w': '< 1 week', '1-4w': '1\u20134 weeks', '1-3m': '1\u20133 months',
-          '3-6m': '3\u20136 months', '6-12m': '6\u201312 months', '1-2y': '1\u20132 years', '2y+': '2+ years',
-        };
-        const datasets = buckets.map((bucket, idx) => ({
-          label: bucketLabels[bucket] || bucket,
-          data: periods.map(p => (tf.review_by_pr_age[p] || {})[bucket] || 0),
-          backgroundColor: agePalette[idx % agePalette.length],
-          borderRadius: 4,
-        }));
-        renderChart('chartReviewAge', 'wrapReviewAge', {
-          labels, minBarWidth, stacked: true, datasets,
-        });
-      }
-
-      // Reviews received by author — stacked bar, top 15 + Others
-      {
-        const cstats = tf.contributor_stats || {};
-        const allAuthors = new Map();
-        for (const [author, pd] of Object.entries(cstats)) {
-          let total = 0;
-          for (const p of periods) {
-            total += pd[p] ? (pd[p].reviews_received || 0) : 0;
-          }
-          if (total > 0) allAuthors.set(author, total);
-        }
-        const sorted = [...allAuthors.entries()].sort((a, b) => b[1] - a[1]);
-        const topN = 15;
-        const topAuthors = sorted.slice(0, topN).map(([u]) => u);
-        const topSet = new Set(topAuthors);
-        const palette = [
-          'rgb(59, 130, 246)', 'rgb(249, 115, 22)', 'rgb(34, 197, 94)', 'rgb(168, 85, 247)',
-          'rgb(236, 72, 153)', 'rgb(234, 179, 8)', 'rgb(20, 184, 166)', 'rgb(239, 68, 68)',
-          'rgb(99, 102, 241)', 'rgb(244, 114, 182)', 'rgb(45, 212, 191)', 'rgb(251, 146, 60)',
-          'rgb(129, 140, 248)', 'rgb(74, 222, 128)', 'rgb(232, 121, 249)',
-        ];
-        const rrDatasets = topAuthors.map((author, idx) => ({
-          label: author,
-          data: periods.map(p => (cstats[author] || {})[p] ? (cstats[author][p].reviews_received || 0) : 0),
-          backgroundColor: palette[idx % palette.length],
-          borderRadius: 4,
-        }));
-        rrDatasets.push({
-          label: 'Others',
-          data: periods.map(p => {
-            let sum = 0;
-            for (const [author, pd] of Object.entries(cstats)) {
-              if (!topSet.has(author) && pd[p]) sum += pd[p].reviews_received || 0;
-            }
-            return sum;
-          }),
-          backgroundColor: 'rgb(107, 114, 128)',
-          borderRadius: 4,
-        });
-        renderChart('chartReviewsRecvByAuthor', 'wrapReviewsRecvByAuthor', {
-          labels, minBarWidth, stacked: true, datasets: rrDatasets,
         });
       }
 
@@ -564,6 +448,151 @@
         });
         renderChart('chartLabelsIssue', 'wrapLabelsIssue', {
           labels, minBarWidth, stacked: true, datasets,
+        });
+      }
+
+      // Merge Process
+      renderChart('chartMergeAccess', 'wrapMergeAccess', {
+        labels, minBarWidth,
+        datasets: [{ label: 'Merge Access', data: mergeAccess, backgroundColor: COLORS.green, borderRadius: 4 }],
+      });
+
+      // Merged PRs by merger — stacked bar, one dataset per person
+      {
+        const allMergers = new Map();
+        for (const p of periods) {
+          const actors = tf.merges_by_actor[p] || {};
+          for (const [u, c] of Object.entries(actors)) {
+            allMergers.set(u, (allMergers.get(u) || 0) + c);
+          }
+        }
+        const sorted = [...allMergers.entries()].sort((a, b) => b[1] - a[1]);
+        const palette = [
+          'rgb(59, 130, 246)', 'rgb(249, 115, 22)', 'rgb(34, 197, 94)', 'rgb(168, 85, 247)',
+          'rgb(236, 72, 153)', 'rgb(234, 179, 8)', 'rgb(20, 184, 166)', 'rgb(239, 68, 68)',
+          'rgb(99, 102, 241)', 'rgb(244, 114, 182)', 'rgb(45, 212, 191)', 'rgb(251, 146, 60)',
+          'rgb(129, 140, 248)', 'rgb(74, 222, 128)', 'rgb(232, 121, 249)', 'rgb(252, 211, 77)',
+        ];
+        const datasets = sorted.map(([merger, _], idx) => ({
+          label: merger,
+          data: periods.map(p => (tf.merges_by_actor[p] || {})[merger] || 0),
+          backgroundColor: palette[idx % palette.length],
+          borderRadius: 4,
+        }));
+        renderChart('chartMergedBy', 'wrapMergedBy', {
+          labels, minBarWidth, stacked: true, datasets,
+        });
+      }
+
+      // Average time to merge — line chart with mean + median + filtered means
+      {
+        const avgTTM = periods.map(p => tf.avg_time_to_merge[p] || 0);
+        const medTTM = periods.map(p => tf.median_time_to_merge[p] || 0);
+        const avgTTMExcl = periods.map(p => tf.avg_time_to_merge_excl_top5[p] || 0);
+        const avgTTMExclMaint = periods.map(p => tf.avg_time_to_merge_excl_maintainers[p] || 0);
+        renderChart('chartTTM', 'wrapTTM', {
+          labels, minBarWidth, type: 'line',
+          datasets: [
+            { label: 'Mean (days)', data: avgTTM, borderColor: COLORS.blue, backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: 'Mean excl. top 5 authors (days)', data: avgTTMExcl, borderColor: COLORS.green, backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: 'Mean excl. maintainers (days)', data: avgTTMExclMaint, borderColor: COLORS.purple, backgroundColor: 'rgba(168,85,247,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: 'Median (days)', data: medTTM, borderColor: COLORS.orange, backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+          ],
+          yTitle: 'Days',
+        });
+      }
+
+      // Time to merge by PR size — line chart with S/M/L buckets
+      {
+        const ttmSize = tf.ttm_by_size || {};
+        const sData = periods.map(p => (ttmSize.S || {})[p] || 0);
+        const mData = periods.map(p => (ttmSize.M || {})[p] || 0);
+        const lData = periods.map(p => (ttmSize.L || {})[p] || 0);
+        renderChart('chartTTMSize', 'wrapTTMSize', {
+          labels, minBarWidth, type: 'line',
+          datasets: [
+            { label: 'Small (\u226450 lines)', data: sData, borderColor: COLORS.green, backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: 'Medium (51-500)', data: mData, borderColor: COLORS.orange, backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: 'Large (>500)', data: lData, borderColor: COLORS.red, backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+          ],
+          yTitle: 'Days',
+        });
+      }
+
+      // Review Activity
+      renderChart('chartCommenters', 'wrapCommenters', {
+        labels, minBarWidth,
+        datasets: [{ label: `Commenters >${threshold}`, data: prolific, backgroundColor: COLORS.purple, borderRadius: 4 }],
+      });
+
+      // Review activity by PR age — stacked bar
+      {
+        const buckets = tf.review_by_pr_age_buckets || [];
+        const agePalette = [
+          'rgb(34, 197, 94)',    // <1w  — green (fresh)
+          'rgb(74, 222, 128)',   // 1-4w — light green
+          'rgb(234, 179, 8)',    // 1-3m — yellow
+          'rgb(249, 115, 22)',   // 3-6m — orange
+          'rgb(239, 68, 68)',    // 6-12m — red
+          'rgb(168, 85, 247)',   // 1-2y — purple
+          'rgb(107, 114, 128)',  // 2y+  — gray
+        ];
+        const bucketLabels = {
+          '<1w': '< 1 week', '1-4w': '1\u20134 weeks', '1-3m': '1\u20133 months',
+          '3-6m': '3\u20136 months', '6-12m': '6\u201312 months', '1-2y': '1\u20132 years', '2y+': '2+ years',
+        };
+        const datasets = buckets.map((bucket, idx) => ({
+          label: bucketLabels[bucket] || bucket,
+          data: periods.map(p => (tf.review_by_pr_age[p] || {})[bucket] || 0),
+          backgroundColor: agePalette[idx % agePalette.length],
+          borderRadius: 4,
+        }));
+        renderChart('chartReviewAge', 'wrapReviewAge', {
+          labels, minBarWidth, stacked: true, datasets,
+        });
+      }
+
+      // Reviews received by author — stacked bar, top 15 + Others
+      {
+        const cstats = tf.contributor_stats || {};
+        const allAuthors = new Map();
+        for (const [author, pd] of Object.entries(cstats)) {
+          let total = 0;
+          for (const p of periods) {
+            total += pd[p] ? (pd[p].reviews_received || 0) : 0;
+          }
+          if (total > 0) allAuthors.set(author, total);
+        }
+        const sorted = [...allAuthors.entries()].sort((a, b) => b[1] - a[1]);
+        const topN = 15;
+        const topAuthors = sorted.slice(0, topN).map(([u]) => u);
+        const topSet = new Set(topAuthors);
+        const palette = [
+          'rgb(59, 130, 246)', 'rgb(249, 115, 22)', 'rgb(34, 197, 94)', 'rgb(168, 85, 247)',
+          'rgb(236, 72, 153)', 'rgb(234, 179, 8)', 'rgb(20, 184, 166)', 'rgb(239, 68, 68)',
+          'rgb(99, 102, 241)', 'rgb(244, 114, 182)', 'rgb(45, 212, 191)', 'rgb(251, 146, 60)',
+          'rgb(129, 140, 248)', 'rgb(74, 222, 128)', 'rgb(232, 121, 249)',
+        ];
+        const rrDatasets = topAuthors.map((author, idx) => ({
+          label: author,
+          data: periods.map(p => (cstats[author] || {})[p] ? (cstats[author][p].reviews_received || 0) : 0),
+          backgroundColor: palette[idx % palette.length],
+          borderRadius: 4,
+        }));
+        rrDatasets.push({
+          label: 'Others',
+          data: periods.map(p => {
+            let sum = 0;
+            for (const [author, pd] of Object.entries(cstats)) {
+              if (!topSet.has(author) && pd[p]) sum += pd[p].reviews_received || 0;
+            }
+            return sum;
+          }),
+          backgroundColor: 'rgb(107, 114, 128)',
+          borderRadius: 4,
+        });
+        renderChart('chartReviewsRecvByAuthor', 'wrapReviewsRecvByAuthor', {
+          labels, minBarWidth, stacked: true, datasets: rrDatasets,
         });
       }
 
@@ -1166,6 +1195,19 @@
         <p class="text-gray-500 text-xs mt-1">${subtitle}</p>
       </div>`;
     }
+
+    // Anchor click → update hash + copy URL to clipboard
+    document.addEventListener('click', e => {
+      const a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      const id = a.getAttribute('href');
+      const target = document.querySelector(id);
+      if (!target) return;
+      e.preventDefault();
+      history.replaceState(null, '', window.location.search + id);
+      target.scrollIntoView({ behavior: 'smooth' });
+      navigator.clipboard.writeText(window.location.href).catch(() => {});
+    });
   </script>
 </body>
 </html>
