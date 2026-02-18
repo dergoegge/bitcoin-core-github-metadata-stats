@@ -1,0 +1,39 @@
+name: Update data.json
+
+on:
+  push:
+    branches: [master]
+  schedule:
+    - cron: '0 6 * * *'  # daily at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v4
+
+      - name: Clone metadata backup repo
+        run: git clone --depth 1 https://github.com/bitcoin-data/github-metadata-backup-bitcoin-bitcoin.git metadata-repo
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run extractor
+        run: python extract_data.py metadata-repo --username-map username_map.json
+
+      - name: Prepare publish directory
+        run: |
+          mkdir -p publish
+          cp data.json index.html username_map.json publish/
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./publish
