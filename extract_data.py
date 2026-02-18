@@ -4,6 +4,7 @@
 Outputs data bucketed by four timeframes: year, quarter (90 days), month, and week.
 """
 
+import argparse
 import json
 import os
 import sys
@@ -15,6 +16,18 @@ PULLS_DIR = os.path.join(BACKUP_DIR, "pulls")
 ISSUES_DIR = os.path.join(BACKUP_DIR, "issues")
 
 COMMENT_THRESHOLD = 100
+
+# Global username mapping (old_name -> new_name), loaded from CLI arg
+USERNAME_MAP = {}
+
+
+def map_username(login):
+    """Map a username through the rename table, following chains."""
+    seen = set()
+    while login in USERNAME_MAP and login not in seen:
+        seen.add(login)
+        login = USERNAME_MAP[login]
+    return login
 
 
 def period_keys(iso_date):
@@ -39,7 +52,7 @@ def collect_comments(events, comments_array, out):
         user = ev.get("user")
         if user is None:
             continue
-        login = user["login"]
+        login = map_username(user["login"])
         date = ev.get("created_at") or ev.get("submitted_at", "")
         if len(date) < 10:
             continue
@@ -51,7 +64,7 @@ def collect_comments(events, comments_array, out):
         user = c.get("user")
         if user is None:
             continue
-        login = user["login"]
+        login = map_username(user["login"])
         date = c.get("created_at", "")
         if len(date) < 10:
             continue
@@ -61,6 +74,20 @@ def collect_comments(events, comments_array, out):
 
 
 def main():
+    global USERNAME_MAP
+
+    parser = argparse.ArgumentParser(description="Extract GitHub PR stats into JSON for visualization.")
+    parser.add_argument(
+        "--username-map",
+        help="Path to JSON file mapping old usernames to new ones: {\"old\": \"new\", ...}",
+    )
+    args = parser.parse_args()
+
+    if args.username_map:
+        with open(args.username_map) as f:
+            USERNAME_MAP = json.load(f)
+        print(f"Loaded {len(USERNAME_MAP)} username mappings from {args.username_map}", file=sys.stderr)
+
     # Raw merged PR records: (merge_iso_date, created_iso_date, author, period_keys, additions, deletions, num_commits)
     merged_prs = []
     # All PR records by creation date: (iso_date, author, period_keys)
@@ -92,7 +119,7 @@ def main():
         collect_comments(events, comments, comment_counts)
 
         # Track all PR authors by creation date
-        author = pull["user"]["login"]
+        author = map_username(pull["user"]["login"])
         created_date = pull["created_at"]
         created_keys = period_keys(created_date)
         all_prs.append((created_date, author, created_keys))
@@ -113,7 +140,7 @@ def main():
             # Track who performed the merge (maintainer with merge access)
             merger = merge_event.get("actor", {}).get("login")
             if merger:
-                merge_actors.append((merge_date, merger))
+                merge_actors.append((merge_date, map_username(merger)))
 
     # --- Read issues ---
     issue_files = [f for f in os.listdir(ISSUES_DIR) if f.endswith(".json")]
