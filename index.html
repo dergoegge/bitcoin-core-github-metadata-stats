@@ -117,7 +117,7 @@
       </div>
     </div>
 
-    <!-- PR Stats -->
+    <!-- PR Stats (commented out)
     <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-10">
       <h2 class="text-lg font-semibold mb-1">PR Stats</h2>
       <p class="text-gray-500 text-sm mb-4">Activity heatmap for individual pull requests</p>
@@ -129,6 +129,7 @@
       <div id="prSummary" class="text-sm text-gray-300 mb-6"></div>
       <div id="prActivityGraph" class="overflow-x-auto"></div>
     </div>
+    -->
 
     <!-- Detail lists -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
@@ -624,7 +625,7 @@
         selectEl.onchange = () => renderContributor(selectEl.value);
       }
 
-      // PR Stats section — activity heatmap per PR
+      /* PR Stats section — commented out
       {
         const prStats = DATA.pr_activity || {};
         const prNumbers = Object.keys(prStats);
@@ -877,6 +878,7 @@
         }
         selectPREl.onchange = () => renderPRStats(selectPREl.value);
       }
+      */ // end PR Stats
     }
 
     function renderChart(canvasId, wrapperId, { labels, datasets, stacked, minBarWidth, type, yTitle, secondaryY }) {
