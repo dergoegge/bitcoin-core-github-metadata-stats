@@ -69,6 +69,51 @@ def collect_comments(events, comments_array, out):
             out[tf][period][login] += 1
 
 
+def _build_contributor_stats(author_period_stats, closed_by_author_period):
+    """Build contributor_stats dict including both merged and closed PR counts."""
+    # Collect all authors that appear in either merged or closed data
+    all_authors = set(author_period_stats.keys())
+    for period_data in closed_by_author_period.values():
+        all_authors.update(period_data.keys())
+
+    result = {}
+    for author in sorted(
+        all_authors,
+        key=lambda a: -sum(len(ps["ttm"]) for ps in author_period_stats.get(a, {}).values()),
+    ):
+        merged_data = author_period_stats.get(author, {})
+        # Collect all periods for this author
+        author_periods = set(merged_data.keys())
+        for period, authors in closed_by_author_period.items():
+            if author in authors:
+                author_periods.add(period)
+
+        author_result = {}
+        for p in author_periods:
+            pstats = merged_data.get(p)
+            closed = closed_by_author_period.get(p, {}).get(author, 0)
+            if pstats:
+                author_result[p] = {
+                    "count": len(pstats["ttm"]),
+                    "closed_count": closed,
+                    "avg_ttm": round(sum(pstats["ttm"]) / len(pstats["ttm"]), 1),
+                    "avg_additions": round(sum(pstats["additions"]) / len(pstats["additions"]), 1),
+                    "avg_deletions": round(sum(pstats["deletions"]) / len(pstats["deletions"]), 1),
+                    "avg_commits": round(sum(pstats["commits"]) / len(pstats["commits"]), 1),
+                }
+            else:
+                author_result[p] = {
+                    "count": 0,
+                    "closed_count": closed,
+                    "avg_ttm": 0,
+                    "avg_additions": 0,
+                    "avg_deletions": 0,
+                    "avg_commits": 0,
+                }
+        result[author] = author_result
+    return result
+
+
 def main():
     global USERNAME_MAP
 
@@ -94,6 +139,8 @@ def main():
 
     # Raw merged PR records: (merge_iso_date, created_iso_date, author, period_keys, additions, deletions, num_commits)
     merged_prs = []
+    # Closed-without-merge PR records: (close_iso_date, author, period_keys)
+    closed_prs = []
     # All PR records by creation date: (iso_date, author, period_keys)
     all_prs = []
     # Merge actors: (iso_date, merger_login) — who clicked the merge button
@@ -133,10 +180,12 @@ def main():
         num_commits = pull.get("commits", 0) or 0
 
         merge_event = None
+        close_event = None
         for ev in events:
             if ev.get("event") == "merged":
                 merge_event = ev
-                break
+            elif ev.get("event") == "closed" and close_event is None:
+                close_event = ev
         if merge_event is not None:
             merge_date = merge_event["created_at"]
             keys = period_keys(merge_date)
@@ -145,6 +194,10 @@ def main():
             merger = merge_event.get("actor", {}).get("login")
             if merger:
                 merge_actors.append((merge_date, map_username(merger)))
+        elif close_event is not None:
+            close_date = close_event["created_at"]
+            keys = period_keys(close_date)
+            closed_prs.append((close_date, author, keys))
 
     # --- Read issues ---
     issue_files = [f for f in os.listdir(issues_dir) if f.endswith(".json")]
@@ -185,6 +238,8 @@ def main():
         ttm_by_size_period = defaultdict(lambda: {"S": [], "M": [], "L": []})
         # Per-author per-period stats: author -> period -> { ttm: [], additions: [], deletions: [], commits: [] }
         author_period_stats = defaultdict(lambda: defaultdict(lambda: {"ttm": [], "additions": [], "deletions": [], "commits": []}))
+        # Closed (not merged) PRs per author per period
+        closed_by_author_period = defaultdict(lambda: defaultdict(int))
         for merge_date, created_date, author, keys, additions, deletions, num_commits in merged_prs:
             merged_authors_by_period[keys[tf]].add(author)
             prs_by_author_period[keys[tf]][author] += 1
@@ -208,6 +263,10 @@ def main():
             author_period_stats[author][period]["additions"].append(additions)
             author_period_stats[author][period]["deletions"].append(deletions)
             author_period_stats[author][period]["commits"].append(num_commits)
+
+        # Closed (not merged) PRs per author per period
+        for close_date, author, keys in closed_prs:
+            closed_by_author_period[keys[tf]][author] += 1
 
         # All PR authors per period (by PR creation date)
         all_authors_by_period = defaultdict(set)
@@ -308,22 +367,9 @@ def main():
                 }
                 for bucket in ("S", "M", "L")
             },
-            "contributor_stats": {
-                author: {
-                    p: {
-                        "count": len(pstats["ttm"]),
-                        "avg_ttm": round(sum(pstats["ttm"]) / len(pstats["ttm"]), 1),
-                        "avg_additions": round(sum(pstats["additions"]) / len(pstats["additions"]), 1),
-                        "avg_deletions": round(sum(pstats["deletions"]) / len(pstats["deletions"]), 1),
-                        "avg_commits": round(sum(pstats["commits"]) / len(pstats["commits"]), 1),
-                    }
-                    for p, pstats in period_data.items()
-                }
-                for author, period_data in sorted(
-                    author_period_stats.items(),
-                    key=lambda x: -sum(len(ps["ttm"]) for ps in x[1].values()),
-                )
-            },
+            "contributor_stats": _build_contributor_stats(
+                author_period_stats, closed_by_author_period
+            ),
         }
 
     output = {
