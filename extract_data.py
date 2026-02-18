@@ -69,9 +69,9 @@ def collect_comments(events, comments_array, out):
             out[tf][period][login] += 1
 
 
-def _build_contributor_stats(author_period_stats, closed_by_author_period):
-    """Build contributor_stats dict including both merged and closed PR counts."""
-    # Collect all authors that appear in either merged or closed data
+def _build_contributor_stats(author_period_stats, closed_by_author_period, comment_counts_tf):
+    """Build contributor_stats dict including merged/closed PR counts and comment counts."""
+    # Collect authors that have at least one merged or closed PR
     all_authors = set(author_period_stats.keys())
     for period_data in closed_by_author_period.values():
         all_authors.update(period_data.keys())
@@ -87,15 +87,21 @@ def _build_contributor_stats(author_period_stats, closed_by_author_period):
         for period, authors in closed_by_author_period.items():
             if author in authors:
                 author_periods.add(period)
+        # Also include periods where this author left comments (but only for PR authors)
+        for period, users in comment_counts_tf.items():
+            if author in users:
+                author_periods.add(period)
 
         author_result = {}
         for p in author_periods:
             pstats = merged_data.get(p)
             closed = closed_by_author_period.get(p, {}).get(author, 0)
+            comments = comment_counts_tf.get(p, {}).get(author, 0)
             if pstats:
                 author_result[p] = {
                     "count": len(pstats["ttm"]),
                     "closed_count": closed,
+                    "comments": comments,
                     "avg_ttm": round(sum(pstats["ttm"]) / len(pstats["ttm"]), 1),
                     "avg_additions": round(sum(pstats["additions"]) / len(pstats["additions"]), 1),
                     "avg_deletions": round(sum(pstats["deletions"]) / len(pstats["deletions"]), 1),
@@ -105,6 +111,7 @@ def _build_contributor_stats(author_period_stats, closed_by_author_period):
                 author_result[p] = {
                     "count": 0,
                     "closed_count": closed,
+                    "comments": comments,
                     "avg_ttm": 0,
                     "avg_additions": 0,
                     "avg_deletions": 0,
@@ -368,7 +375,7 @@ def main():
                 for bucket in ("S", "M", "L")
             },
             "contributor_stats": _build_contributor_stats(
-                author_period_stats, closed_by_author_period
+                author_period_stats, closed_by_author_period, comment_counts[tf]
             ),
         }
 

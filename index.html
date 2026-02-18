@@ -100,6 +100,7 @@
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="relative overflow-x-auto"><div id="wrapContribSize"><canvas id="chartContribSize"></canvas></div></div>
+        <div class="relative overflow-x-auto"><div id="wrapContribComments"><canvas id="chartContribComments"></canvas></div></div>
       </div>
     </div>
 
@@ -500,6 +501,15 @@
             ],
             yTitle: 'Lines',
             secondaryY: { title: 'Commits', position: 'right' },
+          });
+
+          // Comments per period chart
+          const commentData = periods.map(p => pd[p] ? (pd[p].comments || 0) : 0);
+          renderChart('chartContribComments', 'wrapContribComments', {
+            labels, minBarWidth,
+            datasets: [
+              { label: 'Comments', data: commentData, backgroundColor: COLORS.purple, borderRadius: 4 },
+            ],
           });
         }
         renderContributor(defaultAuthor);
