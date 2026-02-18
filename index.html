@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bitcoin Core GitHub Stats</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+  <div class="max-w-6xl mx-auto px-6 py-10">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-white mb-1">Bitcoin Core GitHub Stats</h1>
+        <p class="text-gray-400">PR authors and comment activity per period (bitcoin/bitcoin)</p>
+      </div>
+      <!-- Timeframe selector -->
+      <div id="timeframePicker" class="flex bg-gray-900 rounded-lg border border-gray-800 p-1 gap-1 self-start"></div>
+    </div>
+
+    <!-- Summary cards -->
+    <div id="summary" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10"></div>
+
+    <!-- Charts -->
+    <div class="space-y-8 mb-10">
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-4">Unique PR Authors</h2>
+        <div class="relative overflow-x-auto"><div id="wrapUnique"><canvas id="chartUnique"></canvas></div></div>
+      </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-1">All PR Authors Breakdown</h2>
+        <p class="text-gray-500 text-sm mb-4">Authors with merged PRs (returning + first-time) and authors whose PRs were not merged</p>
+        <div class="relative overflow-x-auto"><div id="wrapCombined"><canvas id="chartCombined"></canvas></div></div>
+      </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-1">Contributors with Merge Access</h2>
+        <p class="text-gray-500 text-sm mb-4">People who merged at least one PR during each period</p>
+        <div class="relative overflow-x-auto"><div id="wrapMergeAccess"><canvas id="chartMergeAccess"></canvas></div></div>
+      </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-1">Merged PRs by Merger</h2>
+        <p class="text-gray-500 text-sm mb-4">Number of PRs merged, broken down by who performed the merge</p>
+        <div class="relative overflow-x-auto"><div id="wrapMergedBy"><canvas id="chartMergedBy"></canvas></div></div>
+      </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-1">Average Time to Merge</h2>
+        <p class="text-gray-500 text-sm mb-4">Mean, mean excluding top 5 authors by PR count, mean excluding maintainers, and median days from PR creation to merge</p>
+        <div class="relative overflow-x-auto"><div id="wrapTTM"><canvas id="chartTTM"></canvas></div></div>
+      </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-1">Time to Merge by PR Size</h2>
+        <p class="text-gray-500 text-sm mb-4">Mean days to merge by patch size: S (&le;50 lines), M (51-500), L (&gt;500)</p>
+        <div class="relative overflow-x-auto"><div id="wrapTTMSize"><canvas id="chartTTMSize"></canvas></div></div>
+      </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-1">Merged PRs by Author</h2>
+        <p class="text-gray-500 text-sm mb-4">Number of merged PRs broken down by PR author (top 15 + others)</p>
+        <div class="relative overflow-x-auto"><div id="wrapPRsByAuthor"><canvas id="chartPRsByAuthor"></canvas></div></div>
+      </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-1">Comment Authors with &gt;<span id="thresholdLabel"></span> Comments</h2>
+        <p class="text-gray-500 text-sm mb-4">Counts comments on both PRs and issues (issue comments, review comments, and code reviews)</p>
+        <div class="relative overflow-x-auto"><div id="wrapCommenters"><canvas id="chartCommenters"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- Data table -->
+    <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-10 overflow-x-auto">
+      <h2 class="text-lg font-semibold mb-4">Breakdown</h2>
+      <div class="max-h-[28rem] overflow-y-auto">
+        <table class="w-full text-sm">
+          <thead class="sticky top-0 bg-gray-900 z-10">
+            <tr class="text-gray-400 border-b border-gray-800">
+              <th class="text-left py-2 px-3">Period</th>
+              <th class="text-right py-2 px-3">Merged Authors</th>
+              <th class="text-right py-2 px-3">First-Time</th>
+              <th class="text-right py-2 px-3">Returning</th>
+              <th class="text-right py-2 px-3">Without Merge</th>
+              <th class="text-right py-2 px-3">First-Time %</th>
+              <th class="text-right py-2 px-3">Merge Access</th>
+              <th class="text-right py-2 px-3">Avg TTM</th>
+              <th class="text-right py-2 px-3">Med TTM</th>
+              <th class="text-right py-2 px-3">Commenters &gt;<span class="thr"></span></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Contributor stats -->
+    <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-10">
+      <h2 class="text-lg font-semibold mb-1">Contributor Stats</h2>
+      <p class="text-gray-500 text-sm mb-4">Per-contributor averages per period across merged PRs</p>
+      <select id="selectContributor" class="mb-4 w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"></select>
+      <div id="contributorSummary" class="text-sm text-gray-300 mb-6"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="relative overflow-x-auto"><div id="wrapContribTTM"><canvas id="chartContribTTM"></canvas></div></div>
+        <div class="relative overflow-x-auto"><div id="wrapContribSize"><canvas id="chartContribSize"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- Detail lists -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-4">First-Time PR Authors</h2>
+        <select id="selectAuthors" class="mb-4 w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"></select>
+        <div id="authorList" class="text-sm text-gray-300"></div>
+      </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-4">Merge Access (30d)</h2>
+        <select id="selectMergeAccess" class="mb-4 w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"></select>
+        <div id="mergeAccessList" class="text-sm text-gray-300"></div>
+      </div>
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <h2 class="text-lg font-semibold mb-4">Prolific Commenters</h2>
+        <select id="selectCommenters" class="mb-4 w-full bg-gray-800 border border-gray-700 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"></select>
+        <div id="commenterList" class="text-sm text-gray-300"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const COLORS = {
+      blue: 'rgb(59, 130, 246)',
+      orange: 'rgb(249, 115, 22)',
+      red: 'rgb(239, 68, 68)',
+      green: 'rgb(34, 197, 94)',
+      purple: 'rgb(168, 85, 247)',
+    };
+
+    const TIMEFRAMES = [
+      { key: 'year',    label: '1 Year' },
+      { key: 'quarter', label: '90 Days' },
+      { key: 'month',   label: '1 Month' },
+    ];
+
+    Chart.defaults.color = 'rgb(156, 163, 175)';
+    Chart.defaults.borderColor = 'rgb(55, 65, 81)';
+
+    let DATA = null;
+    let activeTF = 'year';
+    let charts = {};
+
+    fetch('data.json')
+      .then(r => r.json())
+      .then(data => {
+        DATA = data;
+        buildTimeframePicker();
+        renderAll();
+      });
+
+    function buildTimeframePicker() {
+      const el = document.getElementById('timeframePicker');
+      el.innerHTML = TIMEFRAMES.map(tf =>
+        `<button data-tf="${tf.key}" class="px-3 py-1.5 rounded-md text-sm font-medium transition
+          ${tf.key === activeTF ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}">${tf.label}</button>`
+      ).join('');
+      el.onclick = e => {
+        const btn = e.target.closest('[data-tf]');
+        if (!btn || btn.dataset.tf === activeTF) return;
+        activeTF = btn.dataset.tf;
+        buildTimeframePicker();
+        renderAll();
+      };
+    }
+
+    function renderAll() {
+      const tf = DATA.timeframes[activeTF];
+      const periods = tf.periods;
+      const unique = periods.map(p => tf.unique_author_counts[p] || 0);
+      const noMerge = periods.map(p => tf.no_merge_author_counts[p] || 0);
+      const firstTime = periods.map(p => tf.first_time_author_counts[p] || 0);
+      const returning = unique.map((u, i) => u - firstTime[i]);
+      const prolific = periods.map(p => tf.prolific_commenter_counts[p] || 0);
+      const mergeAccess = periods.map(p => tf.merge_access_counts[p] || 0);
+      const threshold = DATA.comment_threshold;
+
+      // Threshold labels
+      document.getElementById('thresholdLabel').textContent = threshold;
+      document.querySelectorAll('.thr').forEach(el => el.textContent = threshold);
+
+      // Labels for x-axis
+      const labels = periods.map(p => formatPeriod(p, activeTF));
+      const manyPoints = periods.length > 50;
+      const minBarWidth = manyPoints ? 6 : 20;
+
+      // Summary cards
+      const allUniqueAuthors = new Set();
+      for (const arr of Object.values(tf.unique_authors)) arr.forEach(a => allUniqueAuthors.add(a));
+      const peakIdx = unique.indexOf(Math.max(...unique));
+      const peakFirstIdx = firstTime.indexOf(Math.max(...firstTime));
+      const peakProlificIdx = prolific.indexOf(Math.max(...prolific));
+
+      document.getElementById('summary').innerHTML = [
+        card('Total Unique PR Authors', allUniqueAuthors.size, 'All time across all periods'),
+        card('Peak (Unique)', `${labels[peakIdx]} (${unique[peakIdx]})`, 'Period with most unique PR authors'),
+        card('Peak (First-Time)', `${labels[peakFirstIdx]} (${firstTime[peakFirstIdx]})`, 'Period with most new PR authors'),
+        card('Peak (Commenters)', `${labels[peakProlificIdx]} (${prolific[peakProlificIdx]})`, `Period with most >${threshold} commenters`),
+      ].join('');
+
+      // Charts
+      renderChart('chartUnique', 'wrapUnique', {
+        labels, minBarWidth, stacked: true,
+        datasets: [
+          { label: 'Merged', data: unique, backgroundColor: COLORS.blue, borderRadius: 4 },
+          { label: 'Without Merge', data: noMerge, backgroundColor: COLORS.red, borderRadius: 4 },
+        ],
+      });
+
+      renderChart('chartCombined', 'wrapCombined', {
+        labels, minBarWidth, stacked: true,
+        datasets: [
+          { label: 'Returning Authors', data: returning, backgroundColor: COLORS.blue, borderRadius: 4 },
+          { label: 'First-Time Authors', data: firstTime, backgroundColor: COLORS.orange, borderRadius: 4 },
+          { label: 'Without Merge', data: noMerge, backgroundColor: COLORS.red, borderRadius: 4 },
+        ],
+      });
+
+      renderChart('chartMergeAccess', 'wrapMergeAccess', {
+        labels, minBarWidth,
+        datasets: [{ label: 'Merge Access (30d)', data: mergeAccess, backgroundColor: COLORS.green, borderRadius: 4 }],
+      });
+
+      // Merged PRs by merger — stacked bar, one dataset per person
+      {
+        const allMergers = new Map(); // merger -> total count (for sorting)
+        for (const p of periods) {
+          const actors = tf.merges_by_actor[p] || {};
+          for (const [u, c] of Object.entries(actors)) {
+            allMergers.set(u, (allMergers.get(u) || 0) + c);
+          }
+        }
+        // Sort by total descending
+        const sorted = [...allMergers.entries()].sort((a, b) => b[1] - a[1]);
+        const palette = [
+          'rgb(59, 130, 246)', 'rgb(249, 115, 22)', 'rgb(34, 197, 94)', 'rgb(168, 85, 247)',
+          'rgb(236, 72, 153)', 'rgb(234, 179, 8)', 'rgb(20, 184, 166)', 'rgb(239, 68, 68)',
+          'rgb(99, 102, 241)', 'rgb(244, 114, 182)', 'rgb(45, 212, 191)', 'rgb(251, 146, 60)',
+          'rgb(129, 140, 248)', 'rgb(74, 222, 128)', 'rgb(232, 121, 249)', 'rgb(252, 211, 77)',
+        ];
+        const datasets = sorted.map(([merger, _], idx) => ({
+          label: merger,
+          data: periods.map(p => (tf.merges_by_actor[p] || {})[merger] || 0),
+          backgroundColor: palette[idx % palette.length],
+          borderRadius: 4,
+        }));
+        renderChart('chartMergedBy', 'wrapMergedBy', {
+          labels, minBarWidth, stacked: true, datasets,
+        });
+      }
+
+      // Average time to merge — line chart with mean + median + filtered means
+      {
+        const avgTTM = periods.map(p => tf.avg_time_to_merge[p] || 0);
+        const medTTM = periods.map(p => tf.median_time_to_merge[p] || 0);
+        const avgTTMExcl = periods.map(p => tf.avg_time_to_merge_excl_top5[p] || 0);
+        const avgTTMExclMaint = periods.map(p => tf.avg_time_to_merge_excl_maintainers[p] || 0);
+        renderChart('chartTTM', 'wrapTTM', {
+          labels, minBarWidth, type: 'line',
+          datasets: [
+            { label: 'Mean (days)', data: avgTTM, borderColor: COLORS.blue, backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: 'Mean excl. top 5 authors (days)', data: avgTTMExcl, borderColor: COLORS.green, backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: 'Mean excl. maintainers (days)', data: avgTTMExclMaint, borderColor: COLORS.purple, backgroundColor: 'rgba(168,85,247,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: 'Median (days)', data: medTTM, borderColor: COLORS.orange, backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+          ],
+          yTitle: 'Days',
+        });
+      }
+
+      // Time to merge by PR size — line chart with S/M/L buckets
+      {
+        const ttmSize = tf.ttm_by_size || {};
+        const sData = periods.map(p => (ttmSize.S || {})[p] || 0);
+        const mData = periods.map(p => (ttmSize.M || {})[p] || 0);
+        const lData = periods.map(p => (ttmSize.L || {})[p] || 0);
+        renderChart('chartTTMSize', 'wrapTTMSize', {
+          labels, minBarWidth, type: 'line',
+          datasets: [
+            { label: 'Small (\u226450 lines)', data: sData, borderColor: COLORS.green, backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: 'Medium (51-500)', data: mData, borderColor: COLORS.orange, backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: 'Large (>500)', data: lData, borderColor: COLORS.red, backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+          ],
+          yTitle: 'Days',
+        });
+      }
+
+      // Merged PRs by author — stacked bar, top 15 + Others
+      {
+        const allAuthors = new Map();
+        for (const p of periods) {
+          const authors = tf.prs_by_author[p] || {};
+          for (const [u, c] of Object.entries(authors)) {
+            allAuthors.set(u, (allAuthors.get(u) || 0) + c);
+          }
+        }
+        const sorted = [...allAuthors.entries()].sort((a, b) => b[1] - a[1]);
+        const topN = 15;
+        const topAuthors = sorted.slice(0, topN).map(([u]) => u);
+        const topSet = new Set(topAuthors);
+        const palette = [
+          'rgb(59, 130, 246)', 'rgb(249, 115, 22)', 'rgb(34, 197, 94)', 'rgb(168, 85, 247)',
+          'rgb(236, 72, 153)', 'rgb(234, 179, 8)', 'rgb(20, 184, 166)', 'rgb(239, 68, 68)',
+          'rgb(99, 102, 241)', 'rgb(244, 114, 182)', 'rgb(45, 212, 191)', 'rgb(251, 146, 60)',
+          'rgb(129, 140, 248)', 'rgb(74, 222, 128)', 'rgb(232, 121, 249)',
+        ];
+        const datasets = topAuthors.map((author, idx) => ({
+          label: author,
+          data: periods.map(p => (tf.prs_by_author[p] || {})[author] || 0),
+          backgroundColor: palette[idx % palette.length],
+          borderRadius: 4,
+        }));
+        // "Others" bucket
+        datasets.push({
+          label: 'Others',
+          data: periods.map(p => {
+            const all = tf.prs_by_author[p] || {};
+            return Object.entries(all).reduce((sum, [u, c]) => sum + (topSet.has(u) ? 0 : c), 0);
+          }),
+          backgroundColor: 'rgb(107, 114, 128)',
+          borderRadius: 4,
+        });
+        renderChart('chartPRsByAuthor', 'wrapPRsByAuthor', {
+          labels, minBarWidth, stacked: true, datasets,
+        });
+      }
+
+      renderChart('chartCommenters', 'wrapCommenters', {
+        labels, minBarWidth,
+        datasets: [{ label: `Commenters >${threshold}`, data: prolific, backgroundColor: COLORS.purple, borderRadius: 4 }],
+      });
+
+      // Table
+      const avgTTMAll = periods.map(p => tf.avg_time_to_merge[p] || 0);
+      const medTTMAll = periods.map(p => tf.median_time_to_merge[p] || 0);
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = periods.map((p, i) => {
+        const pct = unique[i] > 0 ? ((firstTime[i] / unique[i]) * 100).toFixed(1) : '0.0';
+        return `<tr class="border-b border-gray-800 hover:bg-gray-800/50">
+          <td class="py-2 px-3 font-medium whitespace-nowrap">${labels[i]}</td>
+          <td class="py-2 px-3 text-right">${unique[i]}</td>
+          <td class="py-2 px-3 text-right text-orange-400">${firstTime[i]}</td>
+          <td class="py-2 px-3 text-right text-blue-400">${returning[i]}</td>
+          <td class="py-2 px-3 text-right text-red-400">${noMerge[i]}</td>
+          <td class="py-2 px-3 text-right">${pct}%</td>
+          <td class="py-2 px-3 text-right text-green-400">${mergeAccess[i]}</td>
+          <td class="py-2 px-3 text-right">${avgTTMAll[i]}d</td>
+          <td class="py-2 px-3 text-right">${medTTMAll[i]}d</td>
+          <td class="py-2 px-3 text-right text-purple-400">${prolific[i]}</td>
+        </tr>`;
+      }).join('');
+
+      // Tab panels
+      const defaultPeriod = periods[Math.max(0, periods.length - 2)];
+
+      setupSelectPanel({
+        selectEl: document.getElementById('selectAuthors'),
+        listEl: document.getElementById('authorList'),
+        periods, labels, defaultPeriod,
+        getData: p => {
+          const authors = tf.first_time_authors[p] || [];
+          if (!authors.length) return '<p class="text-gray-500">No first-time authors in this period.</p>';
+          return `<p class="text-gray-400 mb-3">${authors.length} first-time author${authors.length !== 1 ? 's' : ''}:</p>
+            <div class="flex flex-wrap gap-2">${authors.map(a =>
+              `<a href="https://github.com/${a}" target="_blank" rel="noopener"
+                 class="inline-block bg-gray-800 hover:bg-gray-700 text-orange-400 px-3 py-1 rounded-full text-sm transition">${a}</a>`
+            ).join('')}</div>`;
+        },
+      });
+
+      setupSelectPanel({
+        selectEl: document.getElementById('selectMergeAccess'),
+        listEl: document.getElementById('mergeAccessList'),
+        periods, labels, defaultPeriod,
+        getData: p => {
+          const users = tf.merge_access_users[p] || [];
+          if (!users.length) return '<p class="text-gray-500">No one merged a PR in the last 30 days of this period.</p>';
+          return `<p class="text-gray-400 mb-3">${users.length} contributor${users.length !== 1 ? 's' : ''} with merge access:</p>
+            <div class="flex flex-wrap gap-2">${users.map(u =>
+              `<a href="https://github.com/${u}" target="_blank" rel="noopener"
+                 class="inline-block bg-gray-800 hover:bg-gray-700 text-green-400 px-3 py-1 rounded-full text-sm transition">${u}</a>`
+            ).join('')}</div>`;
+        },
+      });
+
+      setupSelectPanel({
+        selectEl: document.getElementById('selectCommenters'),
+        listEl: document.getElementById('commenterList'),
+        periods, labels, defaultPeriod,
+        getData: p => {
+          const details = tf.prolific_commenter_details[p] || {};
+          const entries = Object.entries(details);
+          if (!entries.length) return `<p class="text-gray-500">No commenters with >${threshold} comments in this period.</p>`;
+          return `<p class="text-gray-400 mb-3">${entries.length} commenter${entries.length !== 1 ? 's' : ''} with >${threshold} comments:</p>
+            <div class="flex flex-wrap gap-2">${entries.map(([u, c]) =>
+              `<a href="https://github.com/${u}" target="_blank" rel="noopener"
+                 class="inline-flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-purple-400 px-3 py-1 rounded-full text-sm transition">
+                 ${u}<span class="text-gray-500">${c}</span></a>`
+            ).join('')}</div>`;
+        },
+      });
+
+      // Contributor stats dropdown with per-period charts
+      {
+        const cstats = tf.contributor_stats || {};
+        const authors = Object.keys(cstats);
+        const selectEl = document.getElementById('selectContributor');
+        const summaryEl = document.getElementById('contributorSummary');
+
+        // Compute total PR count per author for the dropdown label
+        function totalPRs(author) {
+          const pd = cstats[author] || {};
+          return Object.values(pd).reduce((s, v) => s + v.count, 0);
+        }
+
+        authors.sort((a, b) => totalPRs(b) - totalPRs(a));
+        const defaultAuthor = authors[0] || '';
+        selectEl.innerHTML = authors.map(a =>
+          `<option value="${a}" ${a === defaultAuthor ? 'selected' : ''}>${a} (${totalPRs(a)} PRs)</option>`
+        ).join('');
+
+        function renderContributor(author) {
+          const pd = cstats[author];
+          if (!pd) {
+            summaryEl.innerHTML = '<p class="text-gray-500">No data.</p>';
+            return;
+          }
+          const total = totalPRs(author);
+          const allTTM = [], allAdd = [], allDel = [], allCommits = [];
+          for (const v of Object.values(pd)) {
+            for (let i = 0; i < v.count; i++) {
+              allTTM.push(v.avg_ttm);
+              allAdd.push(v.avg_additions);
+              allDel.push(v.avg_deletions);
+              allCommits.push(v.avg_commits);
+            }
+          }
+          const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : '0';
+          summaryEl.innerHTML = `
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div class="bg-gray-800 rounded-lg p-4">
+                <p class="text-gray-400 text-xs">Merged PRs</p>
+                <p class="text-xl font-bold text-white mt-1">${total}</p>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-4">
+                <p class="text-gray-400 text-xs">Avg Time to Merge</p>
+                <p class="text-xl font-bold text-white mt-1">${avg(allTTM)}d</p>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-4">
+                <p class="text-gray-400 text-xs">Avg Additions</p>
+                <p class="text-xl font-bold text-green-400 mt-1">+${avg(allAdd)}</p>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-4">
+                <p class="text-gray-400 text-xs">Avg Deletions</p>
+                <p class="text-xl font-bold text-red-400 mt-1">-${avg(allDel)}</p>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-4">
+                <p class="text-gray-400 text-xs">Avg Commits</p>
+                <p class="text-xl font-bold text-white mt-1">${avg(allCommits)}</p>
+              </div>
+            </div>`;
+
+          // TTM + PR count chart
+          const ttmData = periods.map(p => pd[p] ? pd[p].avg_ttm : null);
+          const countData = periods.map(p => pd[p] ? pd[p].count : 0);
+          renderChart('chartContribTTM', 'wrapContribTTM', {
+            labels, minBarWidth, type: 'line',
+            datasets: [
+              { label: 'Avg TTM (days)', data: ttmData, borderColor: COLORS.blue, backgroundColor: 'rgba(59,130,246,0.1)', fill: false, tension: 0.3, pointRadius: 3, yAxisID: 'y', spanGaps: false },
+              { label: 'PR count', data: countData, type: 'bar', backgroundColor: 'rgba(156,163,175,0.3)', borderColor: 'rgb(156,163,175)', borderWidth: 1, borderRadius: 4, yAxisID: 'y1' },
+            ],
+            yTitle: 'Days',
+            secondaryY: { title: 'PRs', position: 'right' },
+          });
+
+          // Additions + deletions chart
+          const addData = periods.map(p => pd[p] ? pd[p].avg_additions : null);
+          const delData = periods.map(p => pd[p] ? pd[p].avg_deletions : null);
+          const commitData = periods.map(p => pd[p] ? pd[p].avg_commits : null);
+          renderChart('chartContribSize', 'wrapContribSize', {
+            labels, minBarWidth, type: 'line',
+            datasets: [
+              { label: 'Avg additions', data: addData, borderColor: COLORS.green, backgroundColor: 'rgba(34,197,94,0.1)', fill: false, tension: 0.3, pointRadius: 3, yAxisID: 'y', spanGaps: false },
+              { label: 'Avg deletions', data: delData, borderColor: COLORS.red, backgroundColor: 'rgba(239,68,68,0.1)', fill: false, tension: 0.3, pointRadius: 3, yAxisID: 'y', spanGaps: false },
+              { label: 'Avg commits', data: commitData, borderColor: COLORS.orange, backgroundColor: 'rgba(249,115,22,0.1)', fill: false, tension: 0.3, pointRadius: 3, yAxisID: 'y1', spanGaps: false },
+            ],
+            yTitle: 'Lines',
+            secondaryY: { title: 'Commits', position: 'right' },
+          });
+        }
+        renderContributor(defaultAuthor);
+        selectEl.onchange = () => renderContributor(selectEl.value);
+      }
+    }
+
+    function renderChart(canvasId, wrapperId, { labels, datasets, stacked, minBarWidth, type, yTitle, secondaryY }) {
+      // Destroy existing
+      if (charts[canvasId]) {
+        charts[canvasId].destroy();
+        delete charts[canvasId];
+      }
+
+      // Set wrapper width for scrollable charts
+      const wrapper = document.getElementById(wrapperId);
+      const neededWidth = labels.length * (minBarWidth + 4);
+      wrapper.style.minWidth = neededWidth > 600 ? neededWidth + 'px' : '';
+
+      const ctx = document.getElementById(canvasId);
+      const scales = {
+        x: {
+          grid: { display: false },
+          stacked: !!stacked,
+          ticks: {
+            maxRotation: labels.length > 30 ? 90 : 0,
+            autoSkip: true,
+            maxTicksLimit: Math.min(labels.length, 40),
+          },
+        },
+        y: {
+          title: { display: true, text: yTitle || 'Count' },
+          beginAtZero: true,
+          stacked: !!stacked,
+        },
+      };
+      if (secondaryY) {
+        scales.y1 = {
+          title: { display: true, text: secondaryY.title },
+          beginAtZero: true,
+          position: secondaryY.position || 'right',
+          grid: { drawOnChartArea: false },
+        };
+      }
+
+      const opts = {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: true, position: 'top', labels: { boxWidth: 12, padding: 16 } },
+        },
+        scales,
+      };
+
+      charts[canvasId] = new Chart(ctx, {
+        type: type || 'bar',
+        data: { labels, datasets },
+        options: opts,
+      });
+    }
+
+    function setupSelectPanel({ selectEl, listEl, periods, labels, defaultPeriod, getData }) {
+      selectEl.innerHTML = periods.map((p, i) =>
+        `<option value="${p}" ${p === defaultPeriod ? 'selected' : ''}>${labels[i]}</option>`
+      ).join('');
+      listEl.innerHTML = getData(defaultPeriod);
+
+      selectEl.onchange = () => {
+        listEl.innerHTML = getData(selectEl.value);
+      };
+    }
+
+    function formatPeriod(p, tf) {
+      if (tf === 'year') return p;
+      if (tf === 'quarter') {
+        const [y, q] = p.split('-');
+        return `${q} ${y}`;
+      }
+      if (tf === 'month') {
+        const [y, m] = p.split('-');
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return `${months[parseInt(m) - 1]} ${y}`;
+      }
+    }
+
+    function card(title, value, subtitle) {
+      return `<div class="bg-gray-900 rounded-xl p-5 border border-gray-800">
+        <p class="text-gray-400 text-sm">${title}</p>
+        <p class="text-2xl font-bold text-white mt-1">${value}</p>
+        <p class="text-gray-500 text-xs mt-1">${subtitle}</p>
+      </div>`;
+    }
+  </script>
+</body>
+</html>
