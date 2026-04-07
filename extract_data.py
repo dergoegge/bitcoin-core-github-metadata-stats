@@ -210,6 +210,13 @@ def main():
         "month": defaultdict(lambda: defaultdict(int)),
     }
 
+    # Total comments received on merged PRs: comments_on_merged_prs[timeframe][period] += n
+    comments_on_merged_prs = {
+        "year": defaultdict(int),
+        "quarter": defaultdict(int),
+        "month": defaultdict(int),
+    }
+
     # --- Read PRs ---
     pr_files = [f for f in os.listdir(pulls_dir) if f.endswith(".json")]
     total_pr = len(pr_files)
@@ -401,6 +408,12 @@ def main():
             "author_updates": author_updates,
             "longest_gap_days": longest_gap,
         }
+
+        # Accumulate comments received on merged PRs, bucketed by merge date
+        if merge_event is not None:
+            merge_keys = period_keys(merge_event["created_at"])
+            for tf_key, period in merge_keys.items():
+                comments_on_merged_prs[tf_key][period] += comments_received
 
     # --- Read issues ---
     if not os.path.isdir(issues_dir):
@@ -620,6 +633,15 @@ def main():
             "label_counts_issue": {
                 p: dict(sorted(label_counts_issue[tf].get(p, {}).items(), key=lambda x: -x[1]))
                 for p in all_periods
+            },
+            "merged_pr_counts": {
+                p: sum(prs_by_author_period.get(p, {}).values()) for p in all_periods
+            },
+            "closed_pr_counts": {
+                p: sum(closed_by_author_period.get(p, {}).values()) for p in all_periods
+            },
+            "comments_on_merged_prs": {
+                p: comments_on_merged_prs[tf].get(p, 0) for p in all_periods
             },
         }
 

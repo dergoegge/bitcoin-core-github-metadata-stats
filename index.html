@@ -74,12 +74,22 @@
         <p class="text-gray-500 text-sm mb-4">Mean days to merge by patch size: S (&le;50 lines), M (51-500), L (&gt;500)</p>
         <div class="relative overflow-x-auto"><div id="wrapTTMSize"><canvas id="chartTTMSize"></canvas></div></div>
       </div>
+      <div id="pct-merged-prs" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">% of Merged PRs <a href="#pct-merged-prs" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
+        <p class="text-gray-500 text-sm mb-4">Percentage of closed PRs that were merged (merged / (merged + closed without merge))</p>
+        <div class="relative overflow-x-auto"><div id="wrapPctMerged"><canvas id="chartPctMerged"></canvas></div></div>
+      </div>
 
       <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider pt-2">Review Activity</h3>
       <div id="comment-authors" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
         <h2 class="text-lg font-semibold mb-1">Comment Authors with &gt;<span id="thresholdLabel"></span> Comments <a href="#comment-authors" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
         <p class="text-gray-500 text-sm mb-4">Counts comments on both PRs and issues (issue comments, review comments, and code reviews)</p>
         <div class="relative overflow-x-auto"><div id="wrapCommenters"><canvas id="chartCommenters"></canvas></div></div>
+      </div>
+      <div id="comments-on-merged-prs" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">Comments on Merged PRs <a href="#comments-on-merged-prs" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
+        <p class="text-gray-500 text-sm mb-4">Total non-author comments and reviews received on merged PRs, bucketed by merge date</p>
+        <div class="relative overflow-x-auto"><div id="wrapCommentsOnMerged"><canvas id="chartCommentsOnMerged"></canvas></div></div>
       </div>
       <div id="review-by-pr-age" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
         <h2 class="text-lg font-semibold mb-1">Review Activity by PR Age <a href="#review-by-pr-age" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
@@ -519,11 +529,37 @@
         });
       }
 
+      // % of merged PRs — line chart
+      {
+        const mergedCounts = periods.map(p => tf.merged_pr_counts[p] || 0);
+        const closedCounts = periods.map(p => tf.closed_pr_counts[p] || 0);
+        const pctMerged = periods.map((_, i) => {
+          const total = mergedCounts[i] + closedCounts[i];
+          return total > 0 ? parseFloat(((mergedCounts[i] / total) * 100).toFixed(1)) : null;
+        });
+        renderChart('chartPctMerged', 'wrapPctMerged', {
+          labels, minBarWidth, type: 'line',
+          datasets: [
+            { label: '% Merged', data: pctMerged, borderColor: COLORS.green, backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3, pointRadius: 2, spanGaps: false },
+          ],
+          yTitle: '%',
+        });
+      }
+
       // Review Activity
       renderChart('chartCommenters', 'wrapCommenters', {
         labels, minBarWidth,
         datasets: [{ label: `Commenters >${threshold}`, data: prolific, backgroundColor: COLORS.purple, borderRadius: 4 }],
       });
+
+      // Comments on merged PRs — bar chart
+      {
+        const commentsOnMerged = periods.map(p => tf.comments_on_merged_prs[p] || 0);
+        renderChart('chartCommentsOnMerged', 'wrapCommentsOnMerged', {
+          labels, minBarWidth,
+          datasets: [{ label: 'Comments on Merged PRs', data: commentsOnMerged, backgroundColor: COLORS.blue, borderRadius: 4 }],
+        });
+      }
 
       // Review activity by PR age — stacked bar
       {
