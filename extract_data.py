@@ -647,13 +647,13 @@ def main():
             "comments_on_merged_prs": {
                 p: comments_on_merged_prs[tf].get(p, 0) for p in all_periods
             },
-            "comments_histogram": {str(k): v for k, v in sorted(comments_hist.items())},
         }
 
     output = {
         "comment_threshold": COMMENT_THRESHOLD,
         "timeframes": timeframes,
         "pr_activity": pr_activity,
+        "comments_histogram": {str(k): v for k, v in sorted(comments_hist.items())},
     }
 
     if args.output:
