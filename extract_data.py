@@ -217,6 +217,9 @@ def main():
         "month": defaultdict(int),
     }
 
+    # Histogram of per-PR comment counts for merged PRs: comments_hist[comment_count] += 1
+    comments_hist: dict[int, int] = defaultdict(int)
+
     # --- Read PRs ---
     pr_files = [f for f in os.listdir(pulls_dir) if f.endswith(".json")]
     total_pr = len(pr_files)
@@ -414,6 +417,7 @@ def main():
             merge_keys = period_keys(merge_event["created_at"])
             for tf_key, period in merge_keys.items():
                 comments_on_merged_prs[tf_key][period] += comments_received
+            comments_hist[comments_received] += 1
 
     # --- Read issues ---
     if not os.path.isdir(issues_dir):
@@ -643,6 +647,7 @@ def main():
             "comments_on_merged_prs": {
                 p: comments_on_merged_prs[tf].get(p, 0) for p in all_periods
             },
+            "comments_histogram": {str(k): v for k, v in sorted(comments_hist.items())},
         }
 
     output = {

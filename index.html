@@ -91,6 +91,11 @@
         <p class="text-gray-500 text-sm mb-4">Total non-author comments and reviews received on merged PRs, bucketed by merge date</p>
         <div class="relative overflow-x-auto"><div id="wrapCommentsOnMerged"><canvas id="chartCommentsOnMerged"></canvas></div></div>
       </div>
+      <div id="comments-histogram" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">Comments on Merged PRs (Distribution) <a href="#comments-histogram" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
+        <p class="text-gray-500 text-sm mb-4">Number of merged PRs by total non-author comments/reviews received (all time)</p>
+        <div class="relative overflow-x-auto"><div id="wrapCommentsHist"><canvas id="chartCommentsHist"></canvas></div></div>
+      </div>
       <div id="review-by-pr-age" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
         <h2 class="text-lg font-semibold mb-1">Review Activity by PR Age <a href="#review-by-pr-age" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
         <p class="text-gray-500 text-sm mb-4">Where does review effort go? Reviews and comments bucketed by PR age at time of review (excludes PR author's own activity)</p>
@@ -561,6 +566,33 @@
         renderChart('chartCommentsOnMerged', 'wrapCommentsOnMerged', {
           labels, minBarWidth,
           datasets: [{ label: 'Avg. Comments on Merged PRs', data: avgCommentsOnMerged, backgroundColor: COLORS.blue, borderRadius: 4 }],
+        });
+      }
+
+      // Comments on merged PRs — histogram (distribution over all time)
+      {
+        const hist = tf.comments_histogram || {};
+        const bins = [
+          { label: '0',    min: 0,  max: 0 },
+          { label: '1',    min: 1,  max: 1 },
+          { label: '2',    min: 2,  max: 2 },
+          { label: '3–5',  min: 3,  max: 5 },
+          { label: '6–10', min: 6,  max: 10 },
+          { label: '11–20',min: 11, max: 20 },
+          { label: '21–50',min: 21, max: 50 },
+          { label: '51+',  min: 51, max: Infinity },
+        ];
+        const histData = bins.map(bin =>
+          Object.entries(hist).reduce((sum, [k, v]) => {
+            const n = parseInt(k, 10);
+            return (n >= bin.min && n <= bin.max) ? sum + v : sum;
+          }, 0)
+        );
+        renderChart('chartCommentsHist', 'wrapCommentsHist', {
+          labels: bins.map(b => b.label),
+          minBarWidth: 40,
+          datasets: [{ label: 'Merged PRs', data: histData, backgroundColor: COLORS.blue, borderRadius: 4 }],
+          yTitle: 'PRs',
         });
       }
 
