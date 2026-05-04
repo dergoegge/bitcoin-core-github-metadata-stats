@@ -74,6 +74,11 @@
         <p class="text-gray-500 text-sm mb-4">Mean days to merge by patch size: S (&le;50 lines), M (51-500), L (&gt;500)</p>
         <div class="relative overflow-x-auto"><div id="wrapTTMSize"><canvas id="chartTTMSize"></canvas></div></div>
       </div>
+      <div id="pr-days-destroyed" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
+        <h2 class="text-lg font-semibold mb-1">Pull Request Days Destroyed <a href="#pr-days-destroyed" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
+        <p class="text-gray-500 text-sm mb-4">Total days that merged PRs were open at the time of merge, summed per period (sum of time-to-merge across all merged PRs)</p>
+        <div class="relative overflow-x-auto"><div id="wrapPRDaysDestroyed"><canvas id="chartPRDaysDestroyed"></canvas></div></div>
+      </div>
       <div id="pct-merged-prs" class="group bg-gray-900 rounded-xl p-6 border border-gray-800 scroll-mt-6">
         <h2 class="text-lg font-semibold mb-1">% of Merged PRs <a href="#pct-merged-prs" class="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">#</a></h2>
         <p class="text-gray-500 text-sm mb-4">Percentage of closed PRs that were merged (merged / (merged + closed without merge))</p>
@@ -530,6 +535,16 @@
             { label: 'Medium (51-500)', data: mData, borderColor: COLORS.orange, backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
             { label: 'Large (>500)', data: lData, borderColor: COLORS.red, backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
           ],
+          yTitle: 'Days',
+        });
+      }
+
+      // PR Days Destroyed — bar chart of total open-days for PRs merged in each period
+      {
+        const daysDestroyed = periods.map(p => (tf.pr_days_destroyed || {})[p] || 0);
+        renderChart('chartPRDaysDestroyed', 'wrapPRDaysDestroyed', {
+          labels, minBarWidth,
+          datasets: [{ label: 'PR Days Destroyed', data: daysDestroyed, backgroundColor: COLORS.red, borderRadius: 4 }],
           yTitle: 'Days',
         });
       }

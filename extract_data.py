@@ -627,6 +627,9 @@ def main():
                 }
                 for bucket in ("S", "M", "L")
             },
+            "pr_days_destroyed": {
+                p: round(sum(ttm_by_period.get(p, [])), 1) for p in all_periods
+            },
             "contributor_stats": _build_contributor_stats(
                 author_period_stats, closed_by_author_period, comment_counts[tf], reviews_received[tf]
             ),
